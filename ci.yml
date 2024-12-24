@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Cypress Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tests
+        run: |
+          echo "Hello world!"
