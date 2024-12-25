@@ -6,7 +6,6 @@ on:
 jobs:
   tests:
     name: Cypress Tests
-    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Tests
