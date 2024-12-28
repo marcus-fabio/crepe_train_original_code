@@ -4,11 +4,11 @@ from datasets import *
 from evaluation import accuracies
 
 
-validation_set_names = ['medleydb']
+validation_set_names = ['mdbsynth']
+dataset_names = ['mdbsynth']
 
 
-def prepare_datasets() -> (Dataset, (np.ndarray, np.ndarray)):
-    names = ['mdbsynth', 'mir1k', 'bach10']
+def prepare_datasets(names) -> (Dataset, (np.ndarray, np.ndarray)):
     train = train_dataset(*names, batch_size=options['batch_size'], augment=options['augment'])
     print("Train dataset:", train, file=sys.stderr)
 
@@ -64,7 +64,7 @@ class PitchAccuracyCallback(keras.callbacks.Callback):
 
 
 def main():
-    train_set, val_sets = prepare_datasets()
+    train_set, val_sets = prepare_datasets(dataset_names)
     val_data = Dataset.concat([Dataset(*val_set) for val_set in val_sets]).collect()
 
     model: keras.Model = build_model()
@@ -74,6 +74,7 @@ def main():
                         callbacks=get_default_callbacks() + [
                             PitchAccuracyCallback(val_sets, local_average=True)
                         ],
+                        # callbacks=get_default_callbacks(),
                         validation_data=val_data)
 
 
