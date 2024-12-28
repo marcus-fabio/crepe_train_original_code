@@ -4,7 +4,7 @@ import tensorflow as tf
 import librosa
 from tqdm import tqdm
 
-options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+options = tf.io.TFRecordOptions(compression_type='GZIP')
 
 label_files = [file for file in os.listdir('PitchLabel') if file.endswith('.pv')]
 audio_files = [file for file in os.listdir('WavFile') if file.endswith('.wav')]
@@ -25,7 +25,7 @@ for label_file, audio_file in tqdm(list(zip(label_files, audio_files))):
     labels = labels[nonzero, :]
 
     output_path = audio_file.replace('.wav', '.tfrecord')
-    writer = tf.python_io.TFRecordWriter(output_path, options=options)
+    writer = tf.io.TFRecordWriter(output_path, options=options)
 
     for i in range(labels.shape[0]):
         center = int(labels[i, 0] * sr)

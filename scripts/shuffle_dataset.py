@@ -23,15 +23,16 @@ import random
 from tqdm import tqdm
 import tensorflow as tf
 
-options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+options = tf.io.TFRecordOptions(compression_type='GZIP')
 output_files = [os.path.join(target_dir, '%s-%04d.tfrecord' % (prefix, i)) for i in range(num_splits)]
-writers = [tf.python_io.TFRecordWriter(file, options=options) for file in output_files]
+writers = [tf.io.TFRecordWriter(file, options=options) for file in output_files]
 
 files = [file for file in os.listdir(source_dir) if file.endswith('.tfrecord')]
 
 # distribute to splits
 for file in tqdm(files):
-    for record in tf.python_io.tf_record_iterator(os.path.join(source_dir, file), options=options):
+    # for record in tf.io.tf_record_iterator(os.path.join(source_dir, file), options=options):
+    for record in tf.data.TFRecordDataset(file, compression_type=options.compression_type):
         split = int(hashlib.sha256(record).hexdigest()[-8:], 16) % num_splits
         writers[split].write(record)
 
@@ -40,9 +41,10 @@ for writer in writers:
 
 # shuffle per-file
 for file in tqdm(output_files):
-    records = [record for record in tf.python_io.tf_record_iterator(file, options=options)]
+    # records = [record for record in tf.io.tf_record_iterator(file, options=options)]
+    records = [record for record in tf.data.TFRecordDataset(file, compression_type=options.compression_type)]
     random.shuffle(records)
-    writer = tf.python_io.TFRecordWriter(file, options=options)
+    writer = tf.io.TFRecordWriter(file, options=options)
     for record in records:
         writer.write(record)
     writer.close()

@@ -7,13 +7,14 @@ from tqdm import tqdm
 search_root = sys.argv[1]
 files = os.listdir(search_root)
 files = [file for file in files if file.endswith('.tfrecord')]
-options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+options = tf.io.TFRecordOptions(compression_type='GZIP')
 
 for file in tqdm(files):
     input_path = os.path.join(search_root, file)
     output_path = file
-    writer = tf.python_io.TFRecordWriter(output_path, options=options)
-    for record in tf.python_io.tf_record_iterator(input_path):
+    writer = tf.io.TFRecordWriter(output_path, options=options)
+    # for record in tf.io.tf_record_iterator(input_path):
+    for record in tf.data.TFRecordDataset(input_path, compression_type=options.compression_type):
         example = tf.train.Example()
         example.ParseFromString(record)
 
