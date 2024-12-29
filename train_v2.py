@@ -33,6 +33,7 @@ class PitchAccuracyCallback(keras.callbacks.Callback):
             with open(log_path(self.prefix + filename), "w") as f:
                 f.write('\t'.join(validation_set_names) + '\n')
 
+    # noinspection PyUnusedLocal
     def on_epoch_end(self, epoch, logs=None):
         names = list(validation_set_names)
         print(file=sys.stderr)
