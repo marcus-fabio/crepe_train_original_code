@@ -3,6 +3,7 @@ from config import *
 from datasets import *
 from evaluation import accuracies
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 validation_set_names = ['mdbsynth']
 dataset_names = ['mdbsynth']
@@ -36,11 +37,11 @@ class PitchAccuracyCallback(keras.callbacks.Callback):
         names = list(validation_set_names)
         print(file=sys.stderr)
 
-        MAEs = []
-        RPAs = []
-        RCAs = []
+        mae_list = []
+        rpa_list = []
+        rca_list = []
 
-        print("Epoch {}, validation accuracies (local_average = {})".format(epoch + 1, self.local_average), file=sys.stderr)
+        # print("Epoch {}, validation accuracies (local_average = {})".format(epoch + 1, self.local_average), file=sys.stderr)
         for audio, true_cents in self.val_sets:
             predicted = self.model.predict(audio)
             predicted_cents = self.to_cents(predicted)
@@ -48,17 +49,18 @@ class PitchAccuracyCallback(keras.callbacks.Callback):
             mae = np.mean(diff[np.isfinite(diff)])
             rpa, rca = accuracies(true_cents, predicted_cents)
             nans = np.mean(np.isnan(diff))
-            print("{}: MAE = {}, RPA = {}, RCA = {}, nans = {}".format(names.pop(0), mae, rpa, rca, nans), file=sys.stderr)
-            MAEs.append(mae)
-            RPAs.append(rpa)
-            RCAs.append(rca)
+            # print("{}: MAE = {}, RPA = {}, RCA = {}, nans = {}".format(names.pop(0), mae, rpa, rca, nans), file=sys.stderr)
+            print(f"{names.pop(0)}: MAE = {mae}, RPA = {rpa}, RCA = {rca}, nans = {nans}", file=sys.stderr)
+            mae_list.append(mae)
+            rpa_list.append(rpa)
+            rca_list.append(rca)
 
         with open(log_path(self.prefix + "mae.tsv"), "a") as f:
-            f.write('\t'.join(['%.6f' % mae for mae in MAEs]) + '\n')
+            f.write('\t'.join(['%.6f' % mae for mae in mae_list]) + '\n')
         with open(log_path(self.prefix + "rpa.tsv"), "a") as f:
-            f.write('\t'.join(['%.6f' % rpa for rpa in RPAs]) + '\n')
+            f.write('\t'.join(['%.6f' % rpa for rpa in rpa_list]) + '\n')
         with open(log_path(self.prefix + "rca.tsv"), "a") as f:
-            f.write('\t'.join(['%.6f' % rca for rca in RCAs]) + '\n')
+            f.write('\t'.join(['%.6f' % rca for rca in rca_list]) + '\n')
 
         print(file=sys.stderr)
 
@@ -68,14 +70,21 @@ def main():
     val_data = Dataset.concat([Dataset(*val_set) for val_set in val_sets]).collect()
 
     model: keras.Model = build_model()
-    model.summary()
+    # model.summary()
 
-    model.fit_generator(iter(train_set), steps_per_epoch=options['steps_per_epoch'], epochs=options['epochs'],
-                        callbacks=get_default_callbacks() + [
-                            PitchAccuracyCallback(val_sets, local_average=True)
-                        ],
-                        # callbacks=get_default_callbacks(),
-                        validation_data=val_data)
+    callbacks = get_default_callbacks() + [PitchAccuracyCallback(val_sets, local_average=True)]
+    # model.fit_generator(iter(train_set),
+    #                     steps_per_epoch=options['steps_per_epoch'],
+    #                     epochs=options['epochs'],
+    #                     callbacks=callbacks,
+    #                     validation_data=val_data)
+
+    model.fit(train_set.tensorflow(),
+              # steps_per_epoch=options['steps_per_epoch'],
+              steps_per_epoch=10,
+              epochs=options['epochs'],
+              callbacks=callbacks,
+              validation_data=val_data)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,8 @@ def make_batch(items, default_dtype=None):
 
     # case 3: each item is numpy array -> prepend a batch dimension
     if all([isinstance(item, np.ndarray) for item in items]):
-        return np.vstack(np.expand_dims(array, axis=0) for array in items)
+        # return np.vstack(np.expand_dims(array, axis=0) for array in items)
+        return np.vstack([np.expand_dims(array, axis=0) for array in items])
 
     # case 3: items are numbers -> 1D nparray
     if all([isinstance(item, Number) for item in items]):
