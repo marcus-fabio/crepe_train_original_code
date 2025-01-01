@@ -1,15 +1,25 @@
-import argparse
-import gzip
 import os
 import sys
+import argparse
 
+import gzip
+import imageio
+import numpy as np
+from keras import models # noqa
 import matplotlib.cm
-from mir_eval.melody import *
 from numpy.lib.stride_tricks import as_strided
 from resampy import resample
 from scipy.io import wavfile
+from mir_eval.melody import (
+    raw_pitch_accuracy,
+    raw_chroma_accuracy,
+    hz2cents,
+    voicing_measures,
+    overall_accuracy
+)
 
 from datasets import to_local_average_cents, to_viterbi_cents
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('model',
@@ -29,28 +39,39 @@ args = parser.parse_args()
 if args.output_path is None:
     args.output_path = args.input_path
 
-
-def wav_stream(files):
-    for file in files:
-        srate, data = wavfile.read(os.path.join(args.input_path, file))
-        if len(data.shape) == 2:
-            data = data.mean(axis=1)
+def wav_stream(wav_files):
+    for file in wav_files:
+        srate, wav_data = wavfile.read(os.path.join(args.input_path, file))
+        if len(wav_data.shape) == 2:
+            wav_data = wav_data.mean(axis=1)
         if srate != 16000:
-            data = resample(data, srate, 16000)
+            wav_data = resample(wav_data, srate, 16000)
             srate = 16000
         hop_length = int(srate / 100)
-        n_frames = 1 + int((len(data) - 1024) / hop_length)
-        frames = as_strided(data, shape=(1024, n_frames),
-                            strides=(data.itemsize, hop_length * data.itemsize))
+        n_frames = 1 + int((len(wav_data) - 1024) / hop_length)
+        frames = as_strided(wav_data, shape=(1024, n_frames),
+                            strides=(wav_data.itemsize, hop_length * wav_data.itemsize))
         frames = frames.transpose().astype(np.float32)
-        yield (file, frames)
+        yield file, frames
 
 
-def npygz_stream(files):
-    for file in files:
+def npygz_stream(npygz_files):
+    for file in npygz_files:
         with gzip.open(os.path.join(args.input_path, file)) as f:
-            yield (file, np.load(f).transpose())
+            yield file, np.load(f).transpose()
 
+def report_accuracy(filename, label_truth, estimated, conf):
+    for acc_file, tau in zip(accuracy_files, np.arange(0.40, 0.95, 0.05)):
+        ref_voicing = np.array(label_truth != 0)
+        est_voicing = np.array(conf > tau)
+
+        rpa = raw_pitch_accuracy(ref_voicing, label_truth, est_voicing, estimated)
+        rca = raw_chroma_accuracy(ref_voicing, label_truth, est_voicing, estimated)
+        recall, false_alarm = voicing_measures(ref_voicing, est_voicing)
+        oa = overall_accuracy(ref_voicing, label_truth, est_voicing, estimated)
+
+        with open(acc_file, "a") as f:
+            print(f"{filename},{rpa},{rca},{recall},{false_alarm},{oa}", file=f)
 
 files = [file for file in os.listdir(args.input_path) if file.lower().endswith('.wav')]
 files.sort()
@@ -68,36 +89,17 @@ else:
     else:
         raise ValueError("No .wav or .npy.gz files found in ", args.input_path)
 
-
-import keras  # noqa
-
-model = keras.models.load_model(args.model)
+model = models.load_model(args.model)
 model.summary()
 
 inferno = matplotlib.cm.get_cmap('inferno')
 viridis = matplotlib.cm.get_cmap('viridis')
 jet = matplotlib.cm.get_cmap('jet')
 
-
 accuracy_files = [os.path.join(args.output_path, 'accuracies-%.2f.csv' % f) for f in np.arange(0.40, 0.95, 0.05)]
 for accuracy_file in accuracy_files:
     with open(accuracy_file, "w") as f:
         print("NAME,RPA,RCA,VR,VFA,OA", file=f)
-
-
-def report_accuracy(name, truth, estimated, confidence):
-    for accuracy_file, tau in zip(accuracy_files, np.arange(0.40, 0.95, 0.05)):
-        ref_voicing = truth != 0
-        est_voicing = confidence > tau
-
-        rpa = raw_pitch_accuracy(ref_voicing, truth, est_voicing, estimated)
-        rca = raw_chroma_accuracy(ref_voicing, truth, est_voicing, estimated)
-        recall, false_alarm = voicing_measures(ref_voicing, est_voicing)
-        oa = overall_accuracy(ref_voicing, truth, est_voicing, estimated)
-
-        with open(accuracy_file, "a") as f:
-            print("{},{},{},{},{},{}".format(name, rpa, rca, recall, false_alarm, oa), file=f)
-
 
 for name, data in stream:
     print('processing', name, 'of shape', data.shape)
@@ -121,12 +123,12 @@ for name, data in stream:
 
     predictions = np.flip(predictions, axis=1)  # to draw the low pitches in the bottom
 
-    figure_file = os.path.join(args.output_path, name + '.salience.png')
+    figure_file = str(os.path.join(args.output_path, name + '.salience.png'))
     image = inferno(predictions.transpose())
     image = np.pad(image, [(0, 20), (0, 0), (0, 0)], mode='constant')
     image[-20:-10, :, :] = viridis(confidence)[np.newaxis, :, :]
-    image[-10:, :, :] = viridis((confidence > 0.5).astype(np.float))[np.newaxis, :, :]
-    scipy.misc.imsave(figure_file, 255 * image)
+    image[-10:, :, :] = viridis((confidence > 0.5).astype(float))[np.newaxis, :, :]
+    imageio.imwrite(figure_file, 255 * image)
 
     if args.truth_path:
         basename = name.replace('.npy.gz', '')
@@ -142,7 +144,7 @@ for name, data in stream:
         truth = hz2cents(truth)
         report_accuracy(name, truth, cents, confidence)
 
-        image = scipy.misc.imread(figure_file, mode='RGB')
+        image = imageio.v2.imread(figure_file, pilmode='RGB')
         image = np.pad(image, [(20, 0), (0, 0), (0, 0)], mode='constant')
 
         for i in range(image.shape[1]):
@@ -150,4 +152,4 @@ for name, data in stream:
                 continue  # no-voice
             image[:20, i, :] = 255 * np.array(jet(int(abs(truth[i] - cents[i]))))[:3]
 
-        scipy.misc.imsave(figure_file.replace('.png', '.eval.png'), image)
+        imageio.imwrite(figure_file, image)

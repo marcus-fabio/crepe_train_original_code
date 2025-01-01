@@ -14,7 +14,7 @@ from tensorflow.keras.layers import (
 )
 
 
-def crempe() -> Model:
+def creme() -> Model:
     # Load CREPE model and return the flattened layer
     crepe_model = load_crepe_model()
     crepe_input = crepe_model.input
@@ -26,7 +26,7 @@ def crempe() -> Model:
     # New output to increase bins resolution:
     # 6 octaves * 12 semitones per octave * 10 bins per semitone = 720 bins
     # 100 cents per semitone / 10 bins per semitone = 10 cents per bin
-    y = Dense(720, activation='sigmoid', name="crempe-classifier")(y)
+    y = Dense(720, activation='sigmoid', name="creme-classifier")(y)
 
     model = Model(inputs=crepe_input, outputs=y)
 
@@ -72,5 +72,5 @@ def load_crepe_model() -> Model:
 
 
 if __name__ == '__main__':
-    crempe_model = crempe()
+    crempe_model = creme()
     crempe_model.summary()
