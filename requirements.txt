@@ -1,4 +1,3 @@
-tensorflow-gpu==1.8.0
 numpy
 scipy
 tqdm
@@ -7,4 +6,3 @@ mir_eval
 pyrubberband
 keras
 hmmlearn
-git+https://github.com/jongwook/flazy.git#egg=flazy
