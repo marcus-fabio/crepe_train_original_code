@@ -1,9 +1,7 @@
-import os
-
 try:
-    import ujson as JSON
+    import ujson
 except ImportError:
-    import json as JSON
+    import json
 
 class Writer:
     def __init__(self, dataset):
@@ -13,4 +11,4 @@ class Writer:
         # TODO: shuffled executor for deterministic/even splits
         raise NotImplementedError
 
-json=Writer
+json = Writer

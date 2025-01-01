@@ -3,8 +3,8 @@ import argparse
 from typing import List
 from datetime import datetime
 
-from keras import Model, models
-from keras.callbacks import (
+from tensorflow.keras import Model, models
+from tensorflow.keras.callbacks import (
     ModelCheckpoint,
     EarlyStopping,
     TensorBoard,

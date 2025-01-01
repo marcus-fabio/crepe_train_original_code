@@ -1,11 +1,11 @@
 import ctypes
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor as TPE
+from concurrent.futures import ThreadPoolExecutor as ThreadPoolExec
 from queue import Queue, Empty
 import time
 from typing import Iterable, Callable, Generator
 
-import multiprocess as mp
+from multiprocess import Manager, Queue, Pool
 
 from .utils import close_iterator
 
@@ -61,7 +61,7 @@ class CurrentThreadExecutor(Executor):
 class BackgroundThreadExecutor(Executor):
     def execute(self, transformer: Callable, upstream: Iterable) -> Generator:
         queue = Queue(maxsize=1)
-        background = TPE(1, 'background-executor')
+        background = ThreadPoolExec(1, 'background-executor')
         background.submit(self._work, upstream, transformer, queue)
 
         iterator = iterate_until_none(queue.get)
@@ -100,10 +100,10 @@ class ThreadPoolExecutor(Executor):
         input_queue = Queue(maxsize=self.threads)
         output_queue = Queue()
 
-        collector = TPE(1, 'thread-pool-executor-collector')
+        collector = ThreadPoolExec(1, 'thread-pool-executor-collector')
         collector.submit(self._collect, upstream, input_queue)
 
-        workers = TPE(self.threads, 'thread-pool-executor-worker')
+        workers = ThreadPoolExec(self.threads, 'thread-pool-executor-worker')
         for _ in range(self.threads):
             workers.submit(self._work, input_queue, transformer, output_queue)
 
@@ -147,15 +147,15 @@ class MultiProcessingExecutor(Executor):
         self.processes = processes
 
     def execute(self, transformer: Callable, upstream: Iterable) -> Generator:
-        manager = mp.Manager()
+        manager = Manager()
         manager.register('None', type(None))
         input_queue = manager.Queue(maxsize=self.processes)
         output_queue = manager.Queue()
 
-        collector = TPE(1, 'multiprocessing-executor-collector')
+        collector = ThreadPoolExec(1, 'multiprocessing-executor-collector')
         collector.submit(self._collect, upstream, input_queue)
 
-        with mp.Pool(self.processes) as pool:
+        with Pool(self.processes) as pool:
             for _ in range(self.processes):
                 pool.apply_async(MultiProcessingExecutor._work, args=(input_queue, transformer, output_queue))
             iterator = iterate_until_none(output_queue.get, self.processes)
@@ -167,14 +167,14 @@ class MultiProcessingExecutor(Executor):
 
         collector.shutdown()
 
-    def _collect(self, upstream: Iterable, input_queue: mp.Queue):
+    def _collect(self, upstream: Iterable, input_queue: Queue):
         for item in upstream:
             input_queue.put(item)
         for _ in range(self.processes):
             input_queue.put(None)
 
     @classmethod
-    def _work(cls, input_queue: mp.Queue, transformer: Callable, output_queue: mp.Queue):
+    def _work(cls, input_queue: Queue, transformer: Callable, output_queue: Queue):
         try:
             for output in transformer(iterate_until_none(input_queue.get)):
                 output_queue.put(output)

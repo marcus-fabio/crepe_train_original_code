@@ -2,13 +2,14 @@ import os
 from tfrecord_lite import decode_example
 from typing import Optional, List
 
-import tensorflow as tf
+from tensorflow.io import TFRecordOptions
+from tensorflow.data import TFRecordDataset
 
 from .. import Dataset
 from ..utils import close_iterator
 
 
-def read_records(path: str, keys: List[str], options: tf.io.TFRecordOptions):
+def read_records(path: str, keys: List[str], options: TFRecordOptions):
     if os.path.isdir(path):
         files = [os.path.join(path, file) for file in os.listdir(path) if file.endswith('.tfrecord')]
     elif os.path.isfile(path):
@@ -18,7 +19,7 @@ def read_records(path: str, keys: List[str], options: tf.io.TFRecordOptions):
 
     for file in files:
         # iterator = tf.io.tf_record_iterator(file, options)
-        dataset = tf.data.TFRecordDataset(file, compression_type=options.compression_type if options else None)
+        dataset = TFRecordDataset(file, compression_type=options.compression_type if options else None)
 
         try:
             # for record in iterator:
@@ -33,7 +34,7 @@ def read_records(path: str, keys: List[str], options: tf.io.TFRecordOptions):
 def tfrecord(*paths: str, keys: List[str]=None, compression: Optional[str]=None, **executor_config):
     options = None
     if compression and compression.lower() == 'gzip':
-        options = tf.io.TFRecordOptions(compression_type='GZIP')
+        options = TFRecordOptions(compression_type='GZIP')
     elif compression and compression.lower() == 'zlib':
-        options = tf.io.TFRecordOptions(compression_type='ZLIB')
+        options = TFRecordOptions(compression_type='ZLIB')
     return Dataset(paths).flatmap(lambda path: read_records(path, keys, options), **executor_config)

@@ -2,7 +2,7 @@ import os
 import sys
 
 import numpy as np
-from keras.callbacks import Callback
+from tensorflow.keras.callbacks import Callback
 
 from evaluation import accuracies
 from config import (

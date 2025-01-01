@@ -1,8 +1,8 @@
 import numpy as np
+from mir_eval.melody import raw_pitch_accuracy, raw_chroma_accuracy
 
 
 def accuracies(true_cents, predicted_cents, cent_tolerence=50):
-    from mir_eval.melody import raw_pitch_accuracy, raw_chroma_accuracy
     assert true_cents.shape == predicted_cents.shape
 
     voicing = np.ones(true_cents.shape)

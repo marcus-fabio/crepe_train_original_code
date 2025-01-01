@@ -5,7 +5,7 @@ import argparse
 import gzip
 import imageio
 import numpy as np
-from keras import models # noqa
+from tensorflow.keras import models # noqa
 import matplotlib.cm
 from numpy.lib.stride_tricks import as_strided
 from resampy import resample
