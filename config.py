@@ -14,6 +14,7 @@ from keras.callbacks import (
 
 import models as crepe_models  # noqa
 
+
 parser = argparse.ArgumentParser('CREPE', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('model', nargs='?', default='crepe',
                     help='name of the model')
@@ -48,10 +49,8 @@ options = vars(parser.parse_args())
 log_dir = os.path.join('experiments', options['experiment_name'])
 os.makedirs(log_dir, exist_ok=True)
 
-
 def log_path(*components):
     return os.path.join(log_dir, *components)
-
 
 def build_model() -> Model:
     """returns the Keras model according to the options"""
@@ -62,7 +61,6 @@ def build_model() -> Model:
         if options['load_model_weights']:
             model.load_weights(options['load_model_weights'])
         return model
-
 
 def get_default_callbacks(custom_callback) -> List[Callback]:
     """returns a list of callbacks that are used by default"""
