@@ -24,6 +24,8 @@ parser.add_argument('--no-augment', dest='augment', action='store_false',
                     help='an option to disable data augmentation')
 parser.add_argument('--optimizer', default='adam',
                     help='the name of Keras optimizer to use')
+parser.add_argument('--learning-rate', default=0.0002, type=float,
+                    help='the training learning rate')
 parser.add_argument('--batch-size', default=32, type=int,
                     help='the mini-batch size')
 parser.add_argument('--validation-take', default=4000, type=int,
@@ -79,7 +81,7 @@ def get_default_callbacks(custom_callback) -> List[Callback]:
     if options['tensorboard']:
         result.append(TensorBoard(log_path('tensorboard')))
 
-    result.append(EarlyStopping(monitor='val_loss', patience=32, verbose=1, mode='min'))
+    result.append(EarlyStopping(monitor='val_loss', patience=32, verbose=1, mode='min', restore_best_weights=True))
     result.append(custom_callback)
 
     return result

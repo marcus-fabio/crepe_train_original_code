@@ -11,7 +11,7 @@ from config import (
     build_model,
     get_default_callbacks
 )
-from datasets import (
+from data_handlers import (
     Dataset,
     train_dataset,
     validation_dataset,
@@ -78,12 +78,12 @@ class PitchAccuracyCallback(Callback):
         print(file=sys.stderr)
 
 def main():
+    model = build_model()
     validation_set_names = ['mdbsynth']
     dataset_names = ['mdbsynth']
     train_set, val_sets = prepare_datasets(dataset_names, validation_set_names)
     val_data = Dataset.concat([Dataset(*val_set) for val_set in val_sets]).collect()
 
-    model = build_model()
 
     callbacks = get_default_callbacks(
         PitchAccuracyCallback(val_sets, validation_set_names, local_average=True)

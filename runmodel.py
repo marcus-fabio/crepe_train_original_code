@@ -18,7 +18,7 @@ from mir_eval.melody import (
     overall_accuracy
 )
 
-from datasets import to_local_average_cents, to_viterbi_cents
+from data_handlers import to_local_average_cents, to_viterbi_cents
 
 
 parser = argparse.ArgumentParser()

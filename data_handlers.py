@@ -33,7 +33,6 @@ def to_classifier_label(pitch):
     result /= classifier_pdf_normalizer
     return result
 
-
 def to_weighted_average_cents(label):
     if label.ndim == 1:
         product_sum = np.sum(label * classifier_cents)
@@ -44,7 +43,6 @@ def to_weighted_average_cents(label):
         weight_sum = np.sum(label, axis=1)
         return product_sum / weight_sum
     raise Exception("label should be either 1d or 2d ndarray")
-
 
 def to_local_average_cents(salience, center=None):
     """find the weighted average cents near the argmax bin"""
@@ -66,7 +64,6 @@ def to_local_average_cents(salience, center=None):
         return np.array([to_local_average_cents(salience[i, :]) for i in range(salience.shape[0])])
 
     raise Exception("label should be either 1d or 2d ndarray")
-
 
 def to_viterbi_cents(salience):
     """Find the Viterbi path using a transition prior that induces pitch continuity"""
@@ -95,7 +92,6 @@ def to_viterbi_cents(salience):
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in range(len(observations))])
 
-
 def train_dataset(*names, batch_size=32, loop=True, augment=True) -> Dataset:
     if len(names) == 0:
         raise ValueError("dataset names required")
@@ -121,7 +117,6 @@ def train_dataset(*names, batch_size=32, loop=True, augment=True) -> Dataset:
         result = result.batch(batch_size)
 
     return result
-
 
 def validation_dataset(*names, seed=None, take=None) -> Dataset:
     if len(names) == 0:

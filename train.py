@@ -1,6 +1,6 @@
 import sys
 from config import *
-from datasets import *
+from data_handlers import *
 from evaluation import accuracies
 
 
