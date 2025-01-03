@@ -3,7 +3,7 @@ import tensorflow as tf
 import librosa
 from tqdm import tqdm
 
-options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+options = tf.io.TFRecordOptions(compression_type='GZIP')
 
 directories = [[d for d in os.listdir('original') if d.startswith("%02d-" % i)][0] for i in range(1, 11)]
 pitch_files = [[f for f in os.listdir('original') if f.startswith("%02d_" % i)][0] for i in range(1, 11)]
@@ -19,7 +19,7 @@ for label_file, directory in tqdm(list(zip(pitch_files, directories))):
     audios = [librosa.load(os.path.join('original', directory, directory + suffixes[i]), sr=sr)[0] for i in range(4)]
 
     output_path = directory + '.tfrecord'
-    writer = tf.python_io.TFRecordWriter(output_path, options=options)
+    writer = tf.io.TFRecordWriter(output_path, options=options)
 
     for row in tqdm(labels):
         center = int(row[0] * sr)

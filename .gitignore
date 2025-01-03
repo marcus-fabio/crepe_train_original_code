@@ -13,3 +13,6 @@ thumbs.db
 
 data
 experiments
+
+model-full.h5
+*.png

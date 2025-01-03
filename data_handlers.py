@@ -1,10 +1,13 @@
 import os
 
-from flazy import Dataset
+import numpy as np
+from hmmlearn import hmm
+from random import Random
 from mir_eval.melody import hz2cents
 from scipy.stats import norm
 
-from transforms import *
+from flazy import Dataset
+from transforms import normalize, add_noise, pitch_shift
 
 classifier_lowest_hz = 31.70
 classifier_lowest_cent = hz2cents(np.array([classifier_lowest_hz]))[0]
@@ -22,7 +25,7 @@ def to_classifier_label(pitch):
     Converts pitch labels in cents, to a vector representing the classification label
     Uses the normal distribution centered at the pitch and the standard deviation of 25 cents,
     normalized so that the exact prediction has the value 1.0.
-    :param pitch: a number or numpy array of shape (1,)
+    :param pitch: a number or numpy array of shape (1, )
     pitch values in cents, as returned by hz2cents with base_frequency = 10 (default)
     :return: ndarray
     """
@@ -30,23 +33,19 @@ def to_classifier_label(pitch):
     result /= classifier_pdf_normalizer
     return result
 
-
 def to_weighted_average_cents(label):
     if label.ndim == 1:
-        productsum = np.sum(label * classifier_cents)
-        weightsum = np.sum(label)
-        return productsum / weightsum
+        product_sum = np.sum(label * classifier_cents)
+        weight_sum = np.sum(label)
+        return product_sum / weight_sum
     if label.ndim == 2:
-        productsum = np.dot(label, classifier_cents)
-        weightsum = np.sum(label, axis=1)
-        return productsum / weightsum
+        product_sum = np.dot(label, classifier_cents)
+        weight_sum = np.sum(label, axis=1)
+        return product_sum / weight_sum
     raise Exception("label should be either 1d or 2d ndarray")
-
 
 def to_local_average_cents(salience, center=None):
     """find the weighted average cents near the argmax bin"""
-
-    import numpy as np
 
     if not hasattr(to_local_average_cents, 'cents_mapping'):
         # the bin number-to-cents mapping
@@ -66,12 +65,8 @@ def to_local_average_cents(salience, center=None):
 
     raise Exception("label should be either 1d or 2d ndarray")
 
-
 def to_viterbi_cents(salience):
     """Find the Viterbi path using a transition prior that induces pitch continuity"""
-
-    import numpy as np
-    from hmmlearn import hmm
 
     # uniform prior on the starting pitch
     starting = np.ones(360) / 360
@@ -96,7 +91,6 @@ def to_viterbi_cents(salience):
     path = model.predict(observations.reshape(-1, 1), [len(observations)])
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in range(len(observations))])
-
 
 def train_dataset(*names, batch_size=32, loop=True, augment=True) -> Dataset:
     if len(names) == 0:
@@ -123,7 +117,6 @@ def train_dataset(*names, batch_size=32, loop=True, augment=True) -> Dataset:
         result = result.batch(batch_size)
 
     return result
-
 
 def validation_dataset(*names, seed=None, take=None) -> Dataset:
     if len(names) == 0:

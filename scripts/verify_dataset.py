@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
 
-options = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.GZIP)
+options = tf.io.TFRecordOptions(compression_type='GZIP')
 
 records = [file for file in os.listdir('.') if file.endswith('.tfrecord')]
 
@@ -13,7 +13,8 @@ pitches = []
 energies = []
 
 for record in tqdm(records):
-    for record in tf.python_io.tf_record_iterator(record, options=options):
+    # for record in tf.io.tf_record_iterator(record, options=options):
+    for record in tf.data.TFRecordDataset(record, compression_type=options.compression_type):
         example = tf.train.Example()
         example.ParseFromString(record)
 
