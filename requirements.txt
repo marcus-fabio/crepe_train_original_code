@@ -12,5 +12,5 @@ imageio
 matplotlib
 resampy
 ujson
-wandb==0.16.3
+wandb
 tfrecord_lite
