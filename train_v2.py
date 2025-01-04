@@ -21,7 +21,7 @@ from data_handlers import (
     to_local_average_cents
 )
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 if options['wandb_key']:
     wandb.login(key=options['wandb_key'])
