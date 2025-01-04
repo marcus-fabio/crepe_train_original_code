@@ -22,6 +22,7 @@ from data_handlers import (
 )
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['WANDB_SILENT'] = 'true'
 
 if options['wandb_key']:
     wandb.login(key=options['wandb_key'])
