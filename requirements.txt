@@ -1,5 +1,5 @@
 numpy==1.21.1
-scipy==1.7.1
+scipy
 tqdm==4.64.0
 librosa==0.8.1
 mir_eval==0.7
