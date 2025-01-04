@@ -39,7 +39,7 @@ def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.nd
     for name in val_dataset_names:
         print(f"Collecting validation set {name}: ", file=sys.stderr)
         dataset = validation_dataset(
-            name, options['test_path'], seed=42, take=100
+            [name], options['test_path'], seed=42, take=100
         ).take(options['validation_take']).collect(verbose=True)
         validation.append(dataset)
 
