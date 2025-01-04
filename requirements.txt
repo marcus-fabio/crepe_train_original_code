@@ -13,3 +13,4 @@ matplotlib
 resampy
 ujson
 wandb
+tfrecord_lite
