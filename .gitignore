@@ -13,6 +13,7 @@ thumbs.db
 
 data
 experiments
+wandb
 
 model-full.h5
 *.png

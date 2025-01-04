@@ -3,6 +3,7 @@ import argparse
 from typing import List
 from datetime import datetime
 
+from wandb.keras import WandbCallback
 from tensorflow.keras import Model, models
 from tensorflow.keras.callbacks import (
     ModelCheckpoint,
@@ -82,6 +83,7 @@ def get_default_callbacks(custom_callback) -> List[Callback]:
         result.append(TensorBoard(log_path('tensorboard')))
 
     result.append(EarlyStopping(monitor='val_loss', patience=32, verbose=1, mode='min', restore_best_weights=True))
+    result.append(WandbCallback(save_model=False))
     result.append(custom_callback)
 
     return result

@@ -1,8 +1,10 @@
 import os
 import sys
+from datetime import datetime
 
 import numpy as np
 from tensorflow.keras.callbacks import Callback
+import wandb
 
 from evaluation import accuracies
 from config import (
@@ -19,8 +21,8 @@ from data_handlers import (
     to_local_average_cents
 )
 
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+wandb.init(project='crepe-retrain', resume=True, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
 
 def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray)):
     train = train_dataset(*train_dataset_names, batch_size=options['batch_size'], augment=options['augment'])
@@ -68,6 +70,8 @@ class PitchAccuracyCallback(Callback):
             rpa_list.append(rpa)
             rca_list.append(rca)
 
+            wandb.log({"rpa": rpa, "rca": rca, "mae": mae})
+
         with open(log_path(self.prefix + "mae.tsv"), "a") as f:
             f.write('\t'.join(['%.6f' % mae for mae in mae_list]) + '\n')
         with open(log_path(self.prefix + "rpa.tsv"), "a") as f:
@@ -84,14 +88,15 @@ def main():
     train_set, val_sets = prepare_datasets(dataset_names, validation_set_names)
     val_data = Dataset.concat([Dataset(*val_set) for val_set in val_sets]).collect()
 
-
     callbacks = get_default_callbacks(
         PitchAccuracyCallback(val_sets, validation_set_names, local_average=True)
     )
 
     model.fit(train_set.tensorflow(),
-              steps_per_epoch=options['steps_per_epoch'],
-              epochs=options['epochs'],
+              # steps_per_epoch=options['steps_per_epoch'],
+              steps_per_epoch=5,
+              # epochs=options['epochs'],
+              epochs=5,
               callbacks=callbacks,
               validation_data=val_data)
 

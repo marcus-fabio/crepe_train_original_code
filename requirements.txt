@@ -12,3 +12,4 @@ imageio==2.31.1
 matplotlib==3.4.2
 resampy==0.2.2
 ujson==5.10.0
+wandb==0.16.3
