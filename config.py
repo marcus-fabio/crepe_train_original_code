@@ -39,7 +39,7 @@ parser.add_argument('--load-model-weights', default=None,
                     help='when specified, the model weights will be loaded from this path')
 parser.add_argument('--save-model', default='model.h5',
                     help='path to save the model on each epoch')
-parser.add_argument('--save-model-weights', default='model.h5',
+parser.add_argument('--save-model-weights', default='model.weights.h5',
                     help='path to save the model weights on each epoch; supersedes --save-model')
 parser.add_argument('--epochs', default=300, type=int,
                     help='number of epochs to train')
