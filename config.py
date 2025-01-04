@@ -3,7 +3,7 @@ import argparse
 from typing import List
 from datetime import datetime
 
-from wandb.keras import WandbCallback
+from wandb.integration.keras import WandbCallback
 from tensorflow.keras import Model, models
 from tensorflow.keras.callbacks import (
     ModelCheckpoint,
