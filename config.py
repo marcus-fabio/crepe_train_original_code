@@ -21,6 +21,8 @@ parser.add_argument('model', nargs='?', default='crepe',
                     help='name of the model')
 parser.add_argument('experiment_name', nargs='?', default=datetime.now().strftime('%Y-%m-%dT%H_%M_%S'),
                     help='a unique identifier string for this run')
+parser.add_argument('--logs-path', default='experiments',
+                    help='the path to save logs')
 parser.add_argument('--no-augment', dest='augment', action='store_false',
                     help='an option to disable data augmentation')
 parser.add_argument('--optimizer', default='adam',
@@ -37,7 +39,7 @@ parser.add_argument('--load-model', default=None,
                     help='when specified, the full model will be loaded from this path')
 parser.add_argument('--load-model-weights', default=None,
                     help='when specified, the model weights will be loaded from this path')
-parser.add_argument('--save-model', default='model.h5',
+parser.add_argument('--save-model', default='model.weights.h5',
                     help='path to save the model on each epoch')
 parser.add_argument('--save-model-weights', default='model.weights.h5',
                     help='path to save the model weights on each epoch; supersedes --save-model')
@@ -55,7 +57,7 @@ parser.add_argument('--wandb-key', default=None,
                     help='wandb api key')
 
 options = vars(parser.parse_args())
-log_dir = os.path.join('experiments', options['experiment_name'])
+log_dir = str(os.path.join(options['logs_path'], options['experiment_name']))
 os.makedirs(log_dir, exist_ok=True)
 
 def log_path(*components):
