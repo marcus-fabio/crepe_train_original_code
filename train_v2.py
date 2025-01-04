@@ -22,16 +22,25 @@ from data_handlers import (
 )
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+if options['wandb_key']:
+    wandb.login(key=options['wandb_key'])
+
 wandb.init(project='crepe-retrain', resume=True, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
 
 def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray)):
-    train = train_dataset(*train_dataset_names, batch_size=options['batch_size'], augment=options['augment'])
+    train = train_dataset(train_dataset_names,
+                          options['train_path'],
+                          batch_size=options['batch_size'],
+                          augment=options['augment'])
     print("Train dataset:", train, file=sys.stderr)
 
     validation = []
     for name in val_dataset_names:
         print(f"Collecting validation set {name}: ", file=sys.stderr)
-        dataset = validation_dataset(name, seed=42, take=100).take(options['validation_take']).collect(verbose=True)
+        dataset = validation_dataset(
+            name, options['test_path'], seed=42, take=100
+        ).take(options['validation_take']).collect(verbose=True)
         validation.append(dataset)
 
     return train, validation

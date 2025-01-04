@@ -47,6 +47,12 @@ parser.add_argument('--steps-per-epoch', default=500, type=int,
                     help='number of steps in a batch')
 parser.add_argument('--tensorboard', default=False, action='store_true',
                     help='when enabled, tensorboard data will be saved under the log directory')
+parser.add_argument('--train-path', default='data/train',
+                    help='path to train data')
+parser.add_argument('--test-path', default='data/train',
+                    help='path to test data')
+parser.add_argument('--wandb-key', default=None,
+                    help='wandb api key')
 
 options = vars(parser.parse_args())
 log_dir = os.path.join('experiments', options['experiment_name'])

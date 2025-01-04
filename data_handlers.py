@@ -14,7 +14,8 @@ classifier_lowest_cent = hz2cents(np.array([classifier_lowest_hz]))[0]
 classifier_cents_per_bin = 20
 classifier_octaves = 6
 classifier_total_bins = int((1200 / classifier_cents_per_bin) * classifier_octaves)
-classifier_cents = np.linspace(0, (classifier_total_bins - 1) * classifier_cents_per_bin, classifier_total_bins) + classifier_lowest_cent
+classifier_cents = np.linspace(0, (classifier_total_bins - 1) * classifier_cents_per_bin,
+                               classifier_total_bins) + classifier_lowest_cent
 classifier_cents_2d = np.expand_dims(classifier_cents, axis=1)
 classifier_norm_stdev = 25
 classifier_pdf_normalizer = norm.pdf(0)
@@ -33,6 +34,7 @@ def to_classifier_label(pitch):
     result /= classifier_pdf_normalizer
     return result
 
+
 def to_weighted_average_cents(label):
     if label.ndim == 1:
         product_sum = np.sum(label * classifier_cents)
@@ -43,6 +45,7 @@ def to_weighted_average_cents(label):
         weight_sum = np.sum(label, axis=1)
         return product_sum / weight_sum
     raise Exception("label should be either 1d or 2d ndarray")
+
 
 def to_local_average_cents(salience, center=None):
     """find the weighted average cents near the argmax bin"""
@@ -65,6 +68,7 @@ def to_local_average_cents(salience, center=None):
 
     raise Exception("label should be either 1d or 2d ndarray")
 
+
 def to_viterbi_cents(salience):
     """Find the Viterbi path using a transition prior that induces pitch continuity"""
 
@@ -81,6 +85,7 @@ def to_viterbi_cents(salience):
     emission = np.eye(360) * self_emission + np.ones(shape=(360, 360)) * ((1 - self_emission) / 359)
 
     # fix the model parameters because we are not optimizing the model
+    # noinspection PyTypeChecker
     model = hmm.MultinomialHMM(360, starting, transition)
     model.startprob_ = starting
     model.transmat_ = transition
@@ -92,11 +97,12 @@ def to_viterbi_cents(salience):
 
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in range(len(observations))])
 
-def train_dataset(*names, batch_size=32, loop=True, augment=True) -> Dataset:
+
+def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> Dataset:
     if len(names) == 0:
         raise ValueError("dataset names required")
 
-    paths = [os.path.join('data', 'train', name) for name in names]
+    paths = [os.path.join(train_path, name) for name in names]
 
     datasets = [Dataset.read.tfrecord(path, compression='gzip') for path in paths]
     datasets = [dataset.select_tuple('audio', 'pitch') for dataset in datasets]
@@ -118,11 +124,12 @@ def train_dataset(*names, batch_size=32, loop=True, augment=True) -> Dataset:
 
     return result
 
-def validation_dataset(*names, seed=None, take=None) -> Dataset:
+
+def validation_dataset(names, test_path: str, seed=None, take=None) -> Dataset:
     if len(names) == 0:
         raise ValueError("dataset names required")
 
-    paths = [os.path.join('data', 'test', name) for name in names]
+    paths = [os.path.join(test_path, name) for name in names]
 
     all_datasets = []
 
