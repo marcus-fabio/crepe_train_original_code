@@ -103,10 +103,8 @@ def main():
     )
 
     model.fit(train_set.tensorflow(),
-              # steps_per_epoch=options['steps_per_epoch'],
-              steps_per_epoch=5,
-              # epochs=options['epochs'],
-              epochs=5,
+              steps_per_epoch=options['steps_per_epoch'],
+              epochs=options['epochs'],
               callbacks=callbacks,
               validation_data=val_data)
 
