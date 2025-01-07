@@ -42,7 +42,9 @@ parser.add_argument('--load-model-weights', default=None,
 parser.add_argument('--save-model', default='model.weights.h5',
                     help='path to save the model on each epoch')
 # parser.add_argument('--save-model-weights', default='model.weights.h5',
-parser.add_argument('--save-model-weights', default='model-{epoch:02d}-{val_loss:.2f}.weights.h5',
+parser.add_argument('--save-model-weights', default='weights/model-{epoch:02d}-{val_loss:.2f}.weights.h5',
+                    help='path to save the model weights on each epoch; supersedes --save-model')
+parser.add_argument('--save-best-only', default=False, action='store_true',
                     help='path to save the model weights on each epoch; supersedes --save-model')
 parser.add_argument('--epochs', default=300, type=int,
                     help='number of epochs to train')
@@ -84,7 +86,7 @@ def get_default_callbacks(custom_callback) -> List[Callback]:
 
     if options['save_model_weights']:
         result.append(ModelCheckpoint(log_path(options['save_model_weights']),
-                                      save_best_only=True,
+                                      save_best_only=options['save_best_only'],
                                       save_weights_only=True,
                                       verbose=1))
     elif options['save_model']:
