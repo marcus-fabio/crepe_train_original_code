@@ -41,7 +41,8 @@ parser.add_argument('--load-model-weights', default=None,
                     help='when specified, the model weights will be loaded from this path')
 parser.add_argument('--save-model', default='model.weights.h5',
                     help='path to save the model on each epoch')
-parser.add_argument('--save-model-weights', default='model.weights.h5',
+# parser.add_argument('--save-model-weights', default='model.weights.h5',
+parser.add_argument('--save-model-weights', default='model-{epoch:02d}-{val_loss:.2f}.weights.h5',
                     help='path to save the model weights on each epoch; supersedes --save-model')
 parser.add_argument('--epochs', default=300, type=int,
                     help='number of epochs to train')
@@ -55,6 +56,8 @@ parser.add_argument('--test-path', default='data/train',
                     help='path to test data')
 parser.add_argument('--wandb-key', default=None,
                     help='wandb api key')
+parser.add_argument('--patience', default=32, type=int,
+                    help='patience for early stopping')
 
 options = vars(parser.parse_args())
 log_dir = str(os.path.join(options['logs_path'], options['experiment_name']))
@@ -90,7 +93,7 @@ def get_default_callbacks(custom_callback) -> List[Callback]:
     if options['tensorboard']:
         result.append(TensorBoard(log_path('tensorboard')))
 
-    result.append(EarlyStopping(monitor='val_loss', patience=32, verbose=1, mode='min', restore_best_weights=True))
+    result.append(EarlyStopping(monitor='val_loss', patience=options['patience'], verbose=1, mode='min', restore_best_weights=True))
     result.append(WandbCallback(save_model=False, save_graph=False))
     result.append(custom_callback)
 

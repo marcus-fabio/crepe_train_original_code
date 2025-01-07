@@ -108,5 +108,16 @@ def main():
               callbacks=callbacks,
               validation_data=val_data)
 
+    # predicted = model.predict(val_data[0])
+    # predicted_cents = to_local_average_cents(predicted)
+    # true_cents = to_weighted_average_cents(val_data[1])
+    # final_rpa, _ = accuracies(true_cents, predicted_cents)
+    #
+    # model.load_weights(log_path(options['save_model_weights']))
+    #
+    # predicted = model.predict(val_data[0])
+    # predicted_cents = to_local_average_cents(predicted)
+    # best_rpa, _ = accuracies(true_cents, predicted_cents)
+
 if __name__ == "__main__":
     main()
