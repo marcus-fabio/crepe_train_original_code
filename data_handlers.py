@@ -98,6 +98,80 @@ def to_viterbi_cents(salience):
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in range(len(observations))])
 
 
+def f0_to_target_vector(f0, vecSize = 486, fmin = 30., fmax = 1000., returnFreqs = False):
+    '''
+    convert from target f0 value to target vector of vecSize pitch classes (corresponding to the values in cents_mapping) that is used as output by the CREPE model
+    Unlike the original CREPE model, the first class corresponds to a frequency of 0 (for unvoiced segments).
+    If the frequency is 0, all values are 0, except for the 1st value that is = 1.
+    For all other cases, the values are gaussian blurred around the target_pitch class, with a maximum value of 1
+    :param f0: target f0 value
+    :return: target vector of vecSize pitch classes (regularly spaced in cents, from fmin to fmax)
+    '''
+
+    fmin_cents = freq2cents(fmin)
+    fmax_cents = freq2cents(fmax)
+    mapping_cents = np.linspace(fmin_cents, fmax_cents, vecSize)
+
+    # get the idx corresponding to the closest pitch
+    f0_cents = freq2cents(f0)
+
+    if isinstance(f0, np.ndarray):
+        f0_cents = f0_cents[:, np.newaxis]
+
+    # gaussian-blur the vector auround the taget pitch idx as stated in the paper :
+    sigma = 25
+    target_vec = np.exp(-((mapping_cents - f0_cents) ** 2) / (2 * (sigma ** 2)))
+
+    if returnFreqs:
+        return target_vec, mapping_cents
+    else:
+        return target_vec
+
+
+def to_local_average_cents_fcn(salience, center=None, fmin=30., fmax=1000., vecSize=486):
+    '''
+    find the weighted average cents near the argmax bin in output pitch class vector
+
+    :param salience: output vector of salience for each pitch class
+    :param fmin: minimum ouput frequency (corresponding to the 1st pitch class in output vector)
+    :param fmax: maximum ouput frequency (corresponding to the last pitch class in output vector)
+    :param vecSize: number of pitch classes in output vector
+    :return: predicted pitch in cents
+    '''
+
+    if not hasattr(to_local_average_cents, 'mapping'):
+        # the bin number-to-cents mapping
+        fmin_cents = freq2cents(fmin)
+        fmax_cents = freq2cents(fmax)
+        to_local_average_cents.mapping = np.linspace(fmin_cents, fmax_cents, vecSize) # cents values corresponding to the bins of the output vector
+
+    if salience.ndim == 1:
+        if center is None:
+            center = int(np.argmax(salience)) # index of maximum value in output vector
+        start = max(0, center - 4)
+        end = min(len(salience), center + 5)
+        salience = salience[start:end]
+        product_sum = np.sum(
+            salience * to_local_average_cents.mapping[start:end])
+        weight_sum = np.sum(salience)
+        return product_sum / weight_sum
+    if salience.ndim == 2:
+        return np.array([to_local_average_cents(salience[i, :]) for i in
+                         range(salience.shape[0])])
+
+    raise Exception("label should be either 1d or 2d ndarray")
+
+
+def freq2cents(f0, f_ref=10.):
+    """
+    Convert a given frequency into its corresponding cents value, according to given reference frequency f_ref
+    :param f0: f0 value (in Hz)
+    :param f_ref: reference frequency for conversion to cents (in Hz)
+    :return: value in cents
+    """
+    c = 1200 * np.log2(f0/f_ref)
+    return c
+
 def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> Dataset:
     if len(names) == 0:
         raise ValueError("dataset names required")
@@ -117,7 +191,7 @@ def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> 
         result = result.starmap(add_noise)
         result = result.starmap(pitch_shift)
 
-    result = result.map(lambda x: (x[0], to_classifier_label(hz2cents(x[1]))))
+    result = result.map(lambda x: (x[0], f0_to_target_vector(freq2cents(x[1]))))
 
     if batch_size:
         result = result.batch(batch_size)
@@ -151,6 +225,6 @@ def validation_dataset(names, test_path: str, seed=None, take=None) -> Dataset:
 
     result = Dataset.roundrobin(all_datasets)
     result = result.starmap(normalize)
-    result = result.map(lambda x: (x[0], to_classifier_label(hz2cents(x[1]))))
+    result = result.map(lambda x: (x[0], f0_to_target_vector(freq2cents(x[1]))))
 
     return result

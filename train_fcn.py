@@ -18,16 +18,19 @@ from data_handlers import (
     train_dataset,
     validation_dataset,
     to_weighted_average_cents,
-    to_local_average_cents
+    # to_local_average_cents,
+    to_local_average_cents_fcn,
+    f0_to_target_vector,
+    freq2cents,
 )
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['WANDB_SILENT'] = 'true'
 
-if options['wandb_key']:
-    wandb.login(key=options['wandb_key'])
-
-wandb.init(project='crepe-retrain', resume=True, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
+# if options['wandb_key']:
+#     wandb.login(key=options['wandb_key'])
+#
+# wandb.init(project='crepe-retrain', resume=True, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
 
 def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray)):
     train = train_dataset(train_dataset_names,
@@ -50,9 +53,9 @@ class PitchAccuracyCallback(Callback):
     def __init__(self, val_sets, val_dataset_names, local_average=False):
         super().__init__()
         self.val_dataset_names = val_dataset_names
-        self.val_sets = [(audio, to_weighted_average_cents(pitch)) for audio, pitch in val_sets]
+        self.val_sets = [(audio, f0_to_target_vector(freq2cents(pitch))) for audio, pitch in val_sets]
         self.local_average = local_average
-        self.to_cents = local_average and to_local_average_cents or to_weighted_average_cents
+        self.to_cents = local_average and to_local_average_cents_fcn or to_weighted_average_cents
         self.prefix = local_average and 'local-average-' or 'default-'
         for filename in ["mae.tsv", "rpa.tsv", "rca.tsv"]:
             with open(log_path(self.prefix + filename), "w") as f:
