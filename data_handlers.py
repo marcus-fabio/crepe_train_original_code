@@ -113,10 +113,10 @@ def f0_to_target_vector(f0, vecSize = 486, fmin = 30., fmax = 1000., returnFreqs
     mapping_cents = np.linspace(fmin_cents, fmax_cents, vecSize)
 
     # get the idx corresponding to the closest pitch
-    f0_cents = freq2cents(f0)
+    f0_cents = freq2cents(f0[0])  # f0[0] manual adjustment to get value from ndarray
 
-    if isinstance(f0, np.ndarray):
-        f0_cents = f0_cents[:, np.newaxis]
+    # if isinstance(f0, np.ndarray):
+    #     f0_cents = f0_cents[:, np.newaxis]
 
     # gaussian-blur the vector auround the taget pitch idx as stated in the paper :
     sigma = 25
@@ -191,7 +191,7 @@ def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> 
         result = result.starmap(add_noise)
         result = result.starmap(pitch_shift)
 
-    result = result.map(lambda x: (x[0], f0_to_target_vector(freq2cents(x[1]))))
+    result = result.map(lambda x: (x[0], f0_to_target_vector(x[1])))
 
     if batch_size:
         result = result.batch(batch_size)
