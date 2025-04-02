@@ -100,3 +100,29 @@ def dilated(optimizer, model_capacity=32, **_) -> Model:
     model.compile(optimizer, 'binary_crossentropy')
 
     return model
+
+def fcn(optimizer, learning_rate, model_capacity=32, **_):
+    layers = [1, 2, 3, 4, 5, 6]
+    filters = [256, 32, 32, 128, 256, 512]
+    widths = [32, 64, 64, 64, 64, 64]
+    strides = [(1, 1), (1, 1), (1, 1), (1, 1), (1, 1), (1, 1)]
+
+    x = Input(shape=(1953,), name='input', dtype='float32')
+    y = Reshape(target_shape=(1953, 1, 1), name='input-reshape')(x)
+
+    for l, f, w, s in zip(layers, filters, widths, strides):
+        y = Conv2D(f, (w, 1), strides=s, padding='valid', activation='relu', name="conv%d" % l)(y)
+        if l < 4:
+            y = MaxPooling2D(pool_size=(2, 1), strides=None, padding='valid', name="conv%d-maxpool" % l)(y)
+
+        y = BatchNormalization(name="conv%d-BN" % l)(y)
+        y = Dropout(0.25, name="conv%d-dropout" % l)(y)
+
+    y = Conv2D(486, (4, 1), strides=(1, 1), padding='valid', activation='sigmoid', name="classifier")(y)
+    y = Permute((2, 1, 3), name="transpose")(y)
+    y = Flatten(name="flatten")(y)
+
+    model = Model(inputs=x, outputs=y)
+    model.compile(optimizer=optimizers[optimizer](learning_rate=learning_rate), loss='binary_crossentropy')
+
+    return model

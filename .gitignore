@@ -14,6 +14,9 @@ thumbs.db
 data
 experiments
 wandb
+mdbsynth
+mdbsynth_tfrecord
 
 model-full.h5
+model-fcn.h5
 *.png

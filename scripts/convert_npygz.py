@@ -48,7 +48,7 @@ def convert_to_tfrecord(source_dir, target_dir):
 
 
 if __name__ == '__main__':
-    DEFAULT_SOURCE_DIR = 'D:/mdbsynth'
-    DEFAULT_TARGET_DIR = 'D:/mdbsynth_tfrecord'
+    DEFAULT_SOURCE_DIR = '../mdbsynth'
+    DEFAULT_TARGET_DIR = '../mdbsynth_tfrecord'
     os.makedirs(DEFAULT_TARGET_DIR, exist_ok=True)
     convert_to_tfrecord(DEFAULT_SOURCE_DIR, DEFAULT_TARGET_DIR)
