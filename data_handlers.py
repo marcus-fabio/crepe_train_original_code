@@ -139,11 +139,11 @@ def to_local_average_cents_fcn(salience, center=None, fmin=30., fmax=1000., vecS
     :return: predicted pitch in cents
     '''
 
-    if not hasattr(to_local_average_cents, 'mapping'):
+    if not hasattr(to_local_average_cents_fcn, 'mapping'):
         # the bin number-to-cents mapping
         fmin_cents = freq2cents(fmin)
         fmax_cents = freq2cents(fmax)
-        to_local_average_cents.mapping = np.linspace(fmin_cents, fmax_cents, vecSize) # cents values corresponding to the bins of the output vector
+        to_local_average_cents_fcn.mapping = np.linspace(fmin_cents, fmax_cents, vecSize) # cents values corresponding to the bins of the output vector
 
     if salience.ndim == 1:
         if center is None:
@@ -152,11 +152,11 @@ def to_local_average_cents_fcn(salience, center=None, fmin=30., fmax=1000., vecS
         end = min(len(salience), center + 5)
         salience = salience[start:end]
         product_sum = np.sum(
-            salience * to_local_average_cents.mapping[start:end])
+            salience * to_local_average_cents_fcn.mapping[start:end])
         weight_sum = np.sum(salience)
         return product_sum / weight_sum
     if salience.ndim == 2:
-        return np.array([to_local_average_cents(salience[i, :]) for i in
+        return np.array([to_local_average_cents_fcn(salience[i, :]) for i in
                          range(salience.shape[0])])
 
     raise Exception("label should be either 1d or 2d ndarray")
