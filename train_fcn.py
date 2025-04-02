@@ -20,8 +20,8 @@ from data_handlers import (
     to_weighted_average_cents,
     # to_local_average_cents,
     to_local_average_cents_fcn,
-    f0_to_target_vector,
-    freq2cents,
+    # f0_to_target_vector,
+    # freq2cents,
 )
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -53,7 +53,7 @@ class PitchAccuracyCallback(Callback):
     def __init__(self, val_sets, val_dataset_names, local_average=False):
         super().__init__()
         self.val_dataset_names = val_dataset_names
-        self.val_sets = [(audio, f0_to_target_vector(freq2cents(pitch))) for audio, pitch in val_sets]
+        self.val_sets = [(audio, to_local_average_cents_fcn(pitch)) for audio, pitch in val_sets]
         self.local_average = local_average
         self.to_cents = local_average and to_local_average_cents_fcn or to_weighted_average_cents
         self.prefix = local_average and 'local-average-' or 'default-'
@@ -96,8 +96,8 @@ class PitchAccuracyCallback(Callback):
 
 def main():
     model = build_model()
-    validation_set_names = ['mdbsynth']
-    dataset_names = ['mdbsynth']
+    validation_set_names = ['mdbsynth-fcn']
+    dataset_names = ['mdbsynth-fcn']
     train_set, val_sets = prepare_datasets(dataset_names, validation_set_names)
     val_data = Dataset.concat([Dataset(*val_set) for val_set in val_sets]).collect()
 
@@ -110,17 +110,6 @@ def main():
               epochs=options['epochs'],
               callbacks=callbacks,
               validation_data=val_data)
-
-    # predicted = model.predict(val_data[0])
-    # predicted_cents = to_local_average_cents(predicted)
-    # true_cents = to_weighted_average_cents(val_data[1])
-    # final_rpa, _ = accuracies(true_cents, predicted_cents)
-    #
-    # model.load_weights(log_path(options['save_model_weights']))
-    #
-    # predicted = model.predict(val_data[0])
-    # predicted_cents = to_local_average_cents(predicted)
-    # best_rpa, _ = accuracies(true_cents, predicted_cents)
 
 if __name__ == "__main__":
     main()
