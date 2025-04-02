@@ -27,10 +27,10 @@ from data_handlers import (
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['WANDB_SILENT'] = 'true'
 
-# if options['wandb_key']:
-#     wandb.login(key=options['wandb_key'])
-#
-# wandb.init(project='crepe-retrain', resume=True, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
+if options['wandb_key']:
+    wandb.login(key=options['wandb_key'])
+
+wandb.init(project='crepe-retrain', resume=True, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
 
 def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray)):
     train = train_dataset(train_dataset_names,
