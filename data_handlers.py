@@ -98,19 +98,24 @@ def to_viterbi_cents(salience):
     return np.array([to_local_average_cents(salience[i, :], path[i]) for i in range(len(observations))])
 
 
-def f0_to_target_vector(f0, vecSize = 486, fmin = 30., fmax = 1000., returnFreqs = False):
-    '''
+def f0_to_target_vector(f0, vec_size=486, f_min=30., f_max=1000., return_freqs=False):
+    """
     convert from target f0 value to target vector of vecSize pitch classes (corresponding to the values in cents_mapping) that is used as output by the CREPE model
     Unlike the original CREPE model, the first class corresponds to a frequency of 0 (for unvoiced segments).
     If the frequency is 0, all values are 0, except for the 1st value that is = 1.
     For all other cases, the values are gaussian blurred around the target_pitch class, with a maximum value of 1
     :param f0: target f0 value
     :return: target vector of vecSize pitch classes (regularly spaced in cents, from fmin to fmax)
-    '''
+    @param return_freqs:
+    @param f_max:
+    @param f_min:
+    @param f0:
+    @param vec_size:
+    """
 
-    fmin_cents = freq2cents(fmin)
-    fmax_cents = freq2cents(fmax)
-    mapping_cents = np.linspace(fmin_cents, fmax_cents, vecSize)
+    fmin_cents = freq2cents(f_min)
+    fmax_cents = freq2cents(f_max)
+    mapping_cents = np.linspace(fmin_cents, fmax_cents, vec_size)
 
     # get the idx corresponding to the closest pitch
     f0_cents = freq2cents(f0[0])  # f0[0] manual adjustment to get value from ndarray
@@ -119,31 +124,40 @@ def f0_to_target_vector(f0, vecSize = 486, fmin = 30., fmax = 1000., returnFreqs
     #     f0_cents = f0_cents[:, np.newaxis]
 
     # gaussian-blur the vector auround the taget pitch idx as stated in the paper :
-    sigma = 25
-    target_vec = np.exp(-((mapping_cents - f0_cents) ** 2) / (2 * (sigma ** 2)))
+    # my equation, same result but comment out to use original equation (optimized by norm.pdf function)
+    # sigma = 25
+    # target_vec = np.exp(-((mapping_cents - f0_cents) ** 2) / (2 * (sigma ** 2)))
 
-    if returnFreqs:
+    target_vec = norm.pdf((mapping_cents - f0_cents) / classifier_norm_stdev).astype(np.float32)
+    target_vec /= classifier_pdf_normalizer
+
+    if return_freqs:
         return target_vec, mapping_cents
     else:
         return target_vec
 
 
-def to_local_average_cents_fcn(salience, center=None, fmin=30., fmax=1000., vecSize=486):
-    '''
+def to_local_average_cents_fcn(salience, center=None, f_min=30., f_max=1000., vec_size=486):
+    """
     find the weighted average cents near the argmax bin in output pitch class vector
 
     :param salience: output vector of salience for each pitch class
-    :param fmin: minimum ouput frequency (corresponding to the 1st pitch class in output vector)
-    :param fmax: maximum ouput frequency (corresponding to the last pitch class in output vector)
+    :param fmin: minimum output frequency (corresponding to the 1st pitch class in output vector)
+    :param fmax: maximum output frequency (corresponding to the last pitch class in output vector)
     :param vecSize: number of pitch classes in output vector
     :return: predicted pitch in cents
-    '''
+    @param vec_size:
+    @param f_max:
+    @param f_min:
+    @param salience:
+    @param center:
+    """
 
     if not hasattr(to_local_average_cents_fcn, 'mapping'):
         # the bin number-to-cents mapping
-        fmin_cents = freq2cents(fmin)
-        fmax_cents = freq2cents(fmax)
-        to_local_average_cents_fcn.mapping = np.linspace(fmin_cents, fmax_cents, vecSize) # cents values corresponding to the bins of the output vector
+        fmin_cents = freq2cents(f_min)
+        fmax_cents = freq2cents(f_max)
+        to_local_average_cents_fcn.mapping = np.linspace(fmin_cents, fmax_cents, vec_size) # cents values corresponding to the bins of the output vector
 
     if salience.ndim == 1:
         if center is None:
@@ -156,8 +170,7 @@ def to_local_average_cents_fcn(salience, center=None, fmin=30., fmax=1000., vecS
         weight_sum = np.sum(salience)
         return product_sum / weight_sum
     if salience.ndim == 2:
-        return np.array([to_local_average_cents_fcn(salience[i, :]) for i in
-                         range(salience.shape[0])])
+        return np.array([to_local_average_cents_fcn(salience[i, :]) for i in range(salience.shape[0])])
 
     raise Exception("label should be either 1d or 2d ndarray")
 
@@ -171,6 +184,7 @@ def freq2cents(f0, f_ref=10.):
     """
     c = 1200 * np.log2(f0/f_ref)
     return c
+
 
 def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> Dataset:
     if len(names) == 0:
@@ -225,6 +239,6 @@ def validation_dataset(names, test_path: str, seed=None, take=None) -> Dataset:
 
     result = Dataset.roundrobin(all_datasets)
     result = result.starmap(normalize)
-    result = result.map(lambda x: (x[0], f0_to_target_vector(freq2cents(x[1]))))
+    result = result.map(lambda x: (x[0], f0_to_target_vector(x[1])))
 
     return result
