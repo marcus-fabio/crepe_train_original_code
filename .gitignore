@@ -16,6 +16,7 @@ experiments
 wandb
 mdbsynth
 mdbsynth_tfrecord
+mdbsynth_8000
 
 model-full.h5
 model-fcn.h5
