@@ -8,12 +8,14 @@
 import os
 import gzip
 import numpy as np
-import tensorflow as tf
+# import tensorflow as tf
 from tqdm import tqdm
+from tensorflow.io import TFRecordOptions, TFRecordWriter
+from tensorflow.train import Example, Feature, Features, FloatList
 
 
 def convert_to_tfrecord(source_dir, target_dir):
-    options = tf.io.TFRecordOptions(compression_type='GZIP')
+    options = TFRecordOptions(compression_type='GZIP')
 
     frequencies_files = [file for file in os.listdir(os.path.join(source_dir, 'frequencies')) if file.endswith('.npy.gz')]
     audio_files = [file for file in os.listdir(os.path.join(source_dir, 'raw')) if file.endswith('.npy.gz')]
@@ -31,16 +33,16 @@ def convert_to_tfrecord(source_dir, target_dir):
         assert audio.shape[1] == freqs.shape[0]
 
         output_path = os.path.join(target_dir, frequency_file.replace('.npy.gz', '.tfrecord'))
-        writer = tf.io.TFRecordWriter(output_path, options=options)
+        writer = TFRecordWriter(output_path, options=options)
 
         nonzero = freqs > 0
         audio = audio[:, nonzero]
         freqs = freqs[nonzero]
 
         for i in tqdm(range(freqs.shape[0])):
-            example = tf.train.Example(features=tf.train.Features(feature={
-                "audio": tf.train.Feature(float_list=tf.train.FloatList(value=audio[:, i])),
-                "pitch": tf.train.Feature(float_list=tf.train.FloatList(value=[freqs[i]]))
+            example = Example(features=Features(feature={
+                "audio": Feature(float_list=FloatList(value=audio[:, i])),
+                "pitch": Feature(float_list=FloatList(value=[freqs[i]]))
             }))
             writer.write(example.SerializeToString())
 
