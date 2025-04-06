@@ -39,7 +39,8 @@ def convert_to_tfrecord(source_dir, target_dir):
         audio = audio[:, nonzero]
         freqs = freqs[nonzero]
 
-        for i in tqdm(range(freqs.shape[0])):
+        # for i in tqdm(range(freqs.shape[0])):
+        for i in range(freqs.shape[0]):
             example = Example(features=Features(feature={
                 "audio": Feature(float_list=FloatList(value=audio[:, i])),
                 "pitch": Feature(float_list=FloatList(value=[freqs[i]]))
