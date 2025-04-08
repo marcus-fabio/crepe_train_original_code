@@ -231,6 +231,7 @@ def to_local_average_cents_multi(salience, f_min=30., f_max=1000., vec_size=486,
     # Create cents mapping
     cents_mapping = np.linspace(cent_min, cent_max, vec_size)
     half_window = window_size // 2
+    eps = 1e-10
 
     def _process_vector(vector):
         peaks, properties = find_peaks(vector, height=threshold)
@@ -244,7 +245,7 @@ def to_local_average_cents_multi(salience, f_min=30., f_max=1000., vec_size=486,
             end = min(len(vector), center + half_window + 1)
             window_vector = vector[start:end]
             window_cents = cents_mapping[start:end]
-            weighted_avg_cents = np.sum(window_vector * window_cents.flatten()) / np.sum(window_vector)
+            weighted_avg_cents = np.sum(window_vector * window_cents.flatten()) / (np.sum(window_vector) + eps)
             cents.append(weighted_avg_cents)
 
         return np.array(cents)
