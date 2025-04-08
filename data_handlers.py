@@ -17,7 +17,8 @@ classifier_total_bins = int((1200 / classifier_cents_per_bin) * classifier_octav
 classifier_cents = np.linspace(0, (classifier_total_bins - 1) * classifier_cents_per_bin,
                                classifier_total_bins) + classifier_lowest_cent
 classifier_cents_2d = np.expand_dims(classifier_cents, axis=1)
-classifier_norm_stdev = 25
+# classifier_norm_stdev = 25
+classifier_norm_stdev = 30  # smooth
 classifier_pdf_normalizer = norm.pdf(0)
 
 
@@ -130,6 +131,7 @@ def f0_to_target_vector(f0, vec_size=486, f_min=30., f_max=1000., return_freqs=F
 
     target_vec = norm.pdf((mapping_cents - f0_cents) / classifier_norm_stdev).astype(np.float32)
     target_vec /= classifier_pdf_normalizer
+    target_vec = np.clip(target_vec, 1e-4, 1 - 1e-4)
 
     if return_freqs:
         return target_vec, mapping_cents
@@ -168,7 +170,8 @@ def to_local_average_cents_fcn(salience, center=None, f_min=30., f_max=1000., ve
         product_sum = np.sum(
             salience * to_local_average_cents_fcn.mapping[start:end])
         weight_sum = np.sum(salience)
-        return product_sum / weight_sum
+        eps = 1e-10
+        return product_sum / (weight_sum + eps)
     if salience.ndim == 2:
         return np.array([to_local_average_cents_fcn(salience[i, :]) for i in range(salience.shape[0])])
 
