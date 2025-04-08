@@ -30,7 +30,7 @@ os.environ['WANDB_SILENT'] = 'true'
 if options['wandb_key']:
     wandb.login(key=options['wandb_key'])
 
-wandb.init(project='fcn-retrain', resume=True, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
+wandb.init(project='fcn-retrain', resume=False, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
 
 def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray)):
     train = train_dataset(train_dataset_names,
@@ -83,7 +83,7 @@ class PitchAccuracyCallback(Callback):
             rpa_list.append(rpa)
             rca_list.append(rca)
 
-            wandb.log({"rpa": rpa, "rca": rca, "mae": mae})
+            wandb.log({"epoch": epoch, "rpa": rpa, "rca": rca, "mae": mae})
 
         with open(log_path(self.prefix + "mae.tsv"), "a") as f:
             f.write('\t'.join(['%.6f' % mae for mae in mae_list]) + '\n')
