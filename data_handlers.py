@@ -178,6 +178,85 @@ def to_local_average_cents_fcn(salience, center=None, f_min=30., f_max=1000., ve
     raise Exception("label should be either 1d or 2d ndarray")
 
 
+def to_classifier_label_multi(pitches, f_min=30., f_max=1000., vec_size=486, norm_dev=25):
+    """
+    Creates a target vector with multiple Gaussian peaks (e.g., for 2 pitches).
+
+    :param pitches: list or np.array of pitch values in hertz (e.g., [550.0, 980.0])
+    :param f_min: min frequency of target in hertz
+    :param f_max: max frequency of target vector in hertz
+    :param vec_size: size of target vector
+    :param norm_dev: standard deviation of gaussian
+    :return: A soft label vector of shape (vec_size,)
+    """
+    target_vector = np.zeros(vec_size, dtype=np.float32)
+    pitches_cents = hz2cents(pitches)
+    cent_min = hz2cents(np.array([f_min]))
+    cent_max = hz2cents(np.array([f_max]))
+    pdf_norm = norm.pdf(0)
+    classifier_cents = np.linspace(cent_min, cent_max, vec_size)
+
+    for pitch_cents in pitches_cents:
+        if pitch_cents <= 0:
+            continue
+
+        gaussian = norm.pdf((classifier_cents - pitch_cents) / norm_dev).flatten()
+        gaussian /= pdf_norm
+        # target_vector += gaussian.astype(np.float32)  # accumulate Gaussians
+        target_vector = np.maximum(target_vector, gaussian)
+
+    # to avoid log(0) in binary cross entropy loss function
+    target_vector = np.clip(target_vector, 1e-4, 1.0)
+    target_vector /= np.max(target_vector)
+
+    return target_vector
+
+
+def to_local_average_cents_multi(salience, f_min=30., f_max=1000., vec_size=486, max_pitches=2, threshold=0.3, window_size=9):
+    """
+    Extract multiple pitch predictions from a salience vector using local peak detection.
+
+    :param salience: 1D numpy array of predicted salience over pitch bins
+    :param f_min: Minimum frequency (Hz)
+    :param f_max: Maximum frequency (Hz)
+    :param vec_size: Number of bins (same as output vector size)
+    :param max_pitches: Number of bins (same as output vector size)
+    :param threshold: Minimum salience required to count a peak
+    :param window_size: Number of bins to use around peak for weighted average
+    :return: list of predicted frequencies (Hz)
+    """
+    cent_min = hz2cents(np.array([f_min]))
+    cent_max = hz2cents(np.array([f_max]))
+
+    # Create cents mapping
+    cents_mapping = np.linspace(cent_min, cent_max, vec_size)
+    half_window = window_size // 2
+
+    def _process_vector(vector):
+        peaks, properties = find_peaks(vector, height=threshold)
+        peak_heights = properties["peak_heights"]
+        top_indices = np.argsort(-peak_heights)[:max_pitches]
+        selected_peaks = peaks[top_indices]
+        cents = []
+
+        for center in selected_peaks:
+            start = max(0, center - half_window)
+            end = min(len(vector), center + half_window + 1)
+            window_vector = vector[start:end]
+            window_cents = cents_mapping[start:end]
+            weighted_avg_cents = np.sum(window_vector * window_cents.flatten()) / np.sum(window_vector)
+            cents.append(weighted_avg_cents)
+
+        return np.array(cents)
+
+    if salience.ndim == 1:
+        return _process_vector(salience)
+    elif salience.ndim == 2:
+        return np.array([_process_vector(frame) for frame in salience])
+    else:
+        raise ValueError("Salience must be 1D or 2D array")
+
+
 def freq2cents(f0, f_ref=10.):
     """
     Convert a given frequency into its corresponding cents value, according to given reference frequency f_ref
