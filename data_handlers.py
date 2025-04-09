@@ -277,17 +277,18 @@ def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> 
 
     datasets = [Dataset.read.tfrecord(path, compression='gzip') for path in paths]
     datasets = [dataset.select_tuple('audio', 'pitch') for dataset in datasets]
-    datasets = [dataset.shuffle(seed=42) for dataset in datasets]
+    # datasets = [dataset.shuffle(seed=42) for dataset in datasets]
 
     if loop:
         datasets = [dataset.repeat() for dataset in datasets]
 
-    result = Dataset.roundrobin(datasets)
-    result = result.starmap(normalize)
+    result = Dataset.roundrobin(datasets).starmap(normalize)
+    # result = result.shuffle(seed=42)
+    # result = result.starmap(normalize)
 
     if augment:
-        result = result.starmap(add_noise)
-        result = result.starmap(pitch_shift)
+        result = result.starmap(add_noise).starmap(pitch_shift)
+        # result = result.starmap(pitch_shift)
 
     result = result.map(lambda x: (x[0], f0_to_target_vector(x[1])))
 
