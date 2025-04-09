@@ -7,7 +7,8 @@ random = Random(42)
 
 def shift(audio, amount):
     # return pyrb.pitch_shift(audio, 16000, amount)
-    return pyrb.pitch_shift(audio, 84108, amount)
+    # return pyrb.pitch_shift(audio, 84108, amount)
+    return pyrb.pitch_shift(audio, 8000, amount)
 
 def normalize(audio, pitch):
     audio = audio - np.mean(audio)
