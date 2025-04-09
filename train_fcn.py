@@ -37,7 +37,8 @@ def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.nd
                           options['train_path'],
                           batch_size=options['batch_size'],
                           augment=options['augment'])
-    print("Train dataset:", train, file=sys.stderr)
+    # print("Train dataset:", train, file=sys.stderr)
+    print("Train dataset configured")
 
     validation = []
     for name in val_dataset_names:
@@ -46,6 +47,7 @@ def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.nd
             [name], options['test_path'], seed=42, take=100
         ).take(options['validation_take']).collect(verbose=True)
         validation.append(dataset)
+    print("Validation dataset configured")
 
     return train, validation
 
@@ -96,8 +98,8 @@ class PitchAccuracyCallback(Callback):
 
 def main():
     model = build_model()
-    validation_set_names = ['mdbsynth-fcn']
-    dataset_names = ['mdbsynth-fcn']
+    validation_set_names = ['mdbsynth-fcn-5']
+    dataset_names = ['mdbsynth-fcn-1', 'mdbsynth-fcn-2', 'mdbsynth-fcn-3', 'mdbsynth-fcn-4']
     train_set, val_sets = prepare_datasets(dataset_names, validation_set_names)
     val_data = Dataset.concat([Dataset(*val_set) for val_set in val_sets]).collect()
 
