@@ -21,3 +21,4 @@ mdbsynth_8000
 model-full.h5
 model-fcn.h5
 *.png
+.env
