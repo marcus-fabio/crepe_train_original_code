@@ -14,3 +14,4 @@ resampy
 ujson
 wandb
 tfrecord_lite
+python-dotenv
