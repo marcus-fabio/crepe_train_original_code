@@ -5,6 +5,7 @@ from hmmlearn import hmm
 from random import Random
 from mir_eval.melody import hz2cents
 from scipy.stats import norm
+from scipy.signal import find_peaks
 
 from flazy import Dataset
 from transforms import normalize, add_noise, pitch_shift
@@ -17,8 +18,7 @@ classifier_total_bins = int((1200 / classifier_cents_per_bin) * classifier_octav
 classifier_cents = np.linspace(0, (classifier_total_bins - 1) * classifier_cents_per_bin,
                                classifier_total_bins) + classifier_lowest_cent
 classifier_cents_2d = np.expand_dims(classifier_cents, axis=1)
-# classifier_norm_stdev = 25
-classifier_norm_stdev = 30  # smooth
+classifier_norm_stdev = 25
 classifier_pdf_normalizer = norm.pdf(0)
 
 
@@ -194,13 +194,13 @@ def to_classifier_label_multi(pitches, f_min=30., f_max=1000., vec_size=486, nor
     cent_min = hz2cents(np.array([f_min]))
     cent_max = hz2cents(np.array([f_max]))
     pdf_norm = norm.pdf(0)
-    classifier_cents = np.linspace(cent_min, cent_max, vec_size)
+    cents_vector = np.linspace(cent_min, cent_max, vec_size)
 
     for pitch_cents in pitches_cents:
         if pitch_cents <= 0:
             continue
 
-        gaussian = norm.pdf((classifier_cents - pitch_cents) / norm_dev).flatten()
+        gaussian = norm.pdf((cents_vector - pitch_cents) / norm_dev).flatten()
         gaussian /= pdf_norm
         # target_vector += gaussian.astype(np.float32)  # accumulate Gaussians
         target_vector = np.maximum(target_vector, gaussian)
@@ -277,6 +277,7 @@ def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> 
 
     datasets = [Dataset.read.tfrecord(path, compression='gzip') for path in paths]
     datasets = [dataset.select_tuple('audio', 'pitch') for dataset in datasets]
+    datasets = [dataset.shuffle(seed=42) for dataset in datasets]
 
     if loop:
         datasets = [dataset.repeat() for dataset in datasets]
