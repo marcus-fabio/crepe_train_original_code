@@ -1,6 +1,12 @@
 import os
 import sys
 from datetime import datetime
+from dotenv import load_dotenv
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['GLOG_minloglevel'] = '3'
+os.environ['ABSL_MIN_LOG_LEVEL'] = '3'
+os.environ['JAX_PLATFORM_NAME'] = 'gpu'
 
 import numpy as np
 from tensorflow.keras.callbacks import Callback
@@ -24,13 +30,13 @@ from data_handlers import (
     # freq2cents,
 )
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+load_dotenv()
+
 os.environ['WANDB_SILENT'] = 'true'
 
-if options['wandb_key']:
-    wandb.login(key=options['wandb_key'])
-
-wandb.init(project='fcn-retrain', resume=False, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
+if os.getenv("WANDB_ENABLED") == "true":
+    wandb.login(key=os.getenv("WANDB_API_KEY"))
+    wandb.init(project='fcn-retrain', resume=False, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
 
 def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray)):
     train = train_dataset(train_dataset_names,
@@ -44,7 +50,7 @@ def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.nd
     for name in val_dataset_names:
         print(f"Collecting validation set {name}: ", file=sys.stderr)
         dataset = validation_dataset(
-            [name], options['test_path'], seed=42, take=100
+            [name], options['test_path'], seed=42, take=10000
         ).take(options['validation_take']).collect(verbose=True)
         validation.append(dataset)
     print("Validation dataset configured")
@@ -85,7 +91,8 @@ class PitchAccuracyCallback(Callback):
             rpa_list.append(rpa)
             rca_list.append(rca)
 
-            wandb.log({"epoch": epoch, "rpa": rpa, "rca": rca, "mae": mae})
+            if os.getenv("WANDB_ENABLED") == "true":
+                wandb.log({"epoch": epoch, "rpa": rpa, "rca": rca, "mae": mae})
 
         with open(log_path(self.prefix + "mae.tsv"), "a") as f:
             f.write('\t'.join(['%.6f' % mae for mae in mae_list]) + '\n')
