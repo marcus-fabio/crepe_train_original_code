@@ -178,7 +178,7 @@ def to_local_average_cents_fcn(salience, center=None, f_min=30., f_max=1000., ve
     raise Exception("label should be either 1d or 2d ndarray")
 
 
-def to_classifier_label_multi(pitches, f_min=30., f_max=1000., vec_size=486, norm_dev=25):
+def to_classifier_label_multi(pitches, f_min=31.7, f_max=2005.5, vec_size=720, norm_dev=25):
     """
     Creates a target vector with multiple Gaussian peaks (e.g., for 2 pitches).
 
@@ -212,7 +212,7 @@ def to_classifier_label_multi(pitches, f_min=30., f_max=1000., vec_size=486, nor
     return target_vector
 
 
-def to_local_average_cents_multi(salience, f_min=30., f_max=1000., vec_size=486, max_pitches=2, threshold=0.3, window_size=9):
+def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=720, max_pitches=2, threshold=0.3, window_size=18):
     """
     Extract multiple pitch predictions from a salience vector using local peak detection.
 
@@ -238,7 +238,7 @@ def to_local_average_cents_multi(salience, f_min=30., f_max=1000., vec_size=486,
         peak_heights = properties["peak_heights"]
         top_indices = np.argsort(-peak_heights)[:max_pitches]
         selected_peaks = peaks[top_indices]
-        cents = []
+        cents_list = []
 
         for center in selected_peaks:
             start = max(0, center - half_window)
@@ -246,9 +246,13 @@ def to_local_average_cents_multi(salience, f_min=30., f_max=1000., vec_size=486,
             window_vector = vector[start:end]
             window_cents = cents_mapping[start:end]
             weighted_avg_cents = np.sum(window_vector * window_cents.flatten()) / (np.sum(window_vector) + eps)
-            cents.append(weighted_avg_cents)
+            cents_list.append(weighted_avg_cents)
 
-        return np.array(cents)
+        cents = np.array(cents_list)
+        if cents.shape[0] < max_pitches:
+            cents = np.pad(cents, (0, max_pitches - cents.shape[0]), constant_values=0.0)
+
+        return cents
 
     if salience.ndim == 1:
         return _process_vector(salience)
@@ -265,8 +269,8 @@ def freq2cents(f0, f_ref=10.):
     :param f_ref: reference frequency for conversion to cents (in Hz)
     :return: value in cents
     """
-    c = 1200 * np.log2(f0/f_ref)
-    return c
+    c = 1200 * np.ma.log2(f0/f_ref)
+    return c.filled(0)
 
 
 def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> Dataset:
@@ -290,7 +294,7 @@ def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> 
         result = result.starmap(add_noise).starmap(pitch_shift)
         # result = result.starmap(pitch_shift)
 
-    result = result.map(lambda x: (x[0], f0_to_target_vector(x[1])))
+    result = result.map(lambda x: (x[0], to_classifier_label_multi(x[1])))
 
     if batch_size:
         result = result.batch(batch_size)
@@ -298,7 +302,7 @@ def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> 
     return result
 
 
-def validation_dataset(names, test_path: str, seed=None, take=None) -> Dataset:
+def validation_dataset(names, test_path: str, seed=None, take=None, target_vector=True) -> Dataset:
     if len(names) == 0:
         raise ValueError("dataset names required")
 
@@ -324,6 +328,8 @@ def validation_dataset(names, test_path: str, seed=None, take=None) -> Dataset:
 
     result = Dataset.roundrobin(all_datasets)
     result = result.starmap(normalize)
-    result = result.map(lambda x: (x[0], f0_to_target_vector(x[1])))
+
+    if target_vector:
+        result = result.map(lambda x: (x[0], to_classifier_label_multi(x[1])))
 
     return result
