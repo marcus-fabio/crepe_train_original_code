@@ -1,0 +1,62 @@
+# import argparse
+#
+# parser = argparse.ArgumentParser()
+# parser.add_argument('source_dir')
+# parser.add_argument('target_dir')
+# args = parser.parse_args()
+
+import os
+import gzip
+import numpy as np
+from tqdm import tqdm
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['GLOG_minloglevel'] = '3'
+os.environ['ABSL_MIN_LOG_LEVEL'] = '3'
+os.environ['JAX_PLATFORM_NAME'] = 'gpu'
+
+from tensorflow.io import TFRecordOptions, TFRecordWriter
+from tensorflow.train import Example, Feature, Features, FloatList
+
+
+def convert_to_tfrecord(source_dir, target_dir):
+    options = TFRecordOptions(compression_type='GZIP')
+
+    frequencies_files = [file for file in os.listdir(os.path.join(source_dir, 'frequencies')) if file.endswith('.npy.gz')]
+    audio_files = [file for file in os.listdir(os.path.join(source_dir, 'raw')) if file.endswith('.npy.gz')]
+
+    frequencies_files.sort()
+    audio_files.sort()
+
+    assert len(frequencies_files) == len(audio_files)
+    assert len(frequencies_files) > 0
+
+    for frequency_file, audio_file in tqdm(list(zip(frequencies_files, audio_files))):
+        freqs = np.load(gzip.open(os.path.join(source_dir, 'frequencies', frequency_file)))
+        audio = np.load(gzip.open(os.path.join(source_dir, 'raw', audio_file)))
+
+        assert audio.shape[1] == freqs.shape[0]
+
+        output_path = os.path.join(target_dir, frequency_file.replace('.npy.gz', '.tfrecord'))
+        writer = TFRecordWriter(output_path, options=options)
+
+        nonzero = np.any(freqs > 0, axis=1)
+        audio = audio[:, nonzero]
+        freqs = freqs[nonzero]
+
+        # for i in tqdm(range(freqs.shape[0])):
+        for i in range(freqs.shape[0]):
+            example = Example(features=Features(feature={
+                "audio": Feature(float_list=FloatList(value=audio[:, i])),
+                "pitch": Feature(float_list=FloatList(value=freqs[i].tolist()))
+            }))
+            writer.write(example.SerializeToString())
+
+        writer.close()
+
+
+if __name__ == '__main__':
+    DEFAULT_SOURCE_DIR = '/mnt/e/mdbsynth_multi_npygz'
+    DEFAULT_TARGET_DIR = '/mnt/e/mdbsynth_multi_tfrecord'
+    os.makedirs(DEFAULT_TARGET_DIR, exist_ok=True)
+    convert_to_tfrecord(DEFAULT_SOURCE_DIR, DEFAULT_TARGET_DIR)
