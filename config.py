@@ -14,6 +14,7 @@ from tensorflow.keras.callbacks import (
 )
 
 import models as crepe_models  # noqa
+from creme import creme as creme_model
 
 
 parser = argparse.ArgumentParser('CREPE', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -38,6 +39,8 @@ parser.add_argument('--model-capacity', default=32, type=int,
 parser.add_argument('--load-model', default=None,
                     help='when specified, the full model will be loaded from this path')
 parser.add_argument('--load-model-weights', default=None,
+                    help='when specified, the model weights will be loaded from this path')
+parser.add_argument('--load-weights-crepe', default='model-full.h5',
                     help='when specified, the model weights will be loaded from this path')
 parser.add_argument('--save-model', default='model.weights.h5',
                     help='path to save the model on each epoch')
@@ -78,7 +81,14 @@ def build_model() -> Model:
             model.load_weights(options['load_model_weights'])
         return model
 
-def get_default_callbacks(custom_callback) -> List[Callback]:
+def build_creme_model() -> Model:
+    model: Model = creme_model(weights_crepe=options['load_weights_crepe'], **options)
+    if options['load_model_weights']:
+        model.load_weights(options['load_model_weights'])
+    return model
+
+
+def get_callbacks(custom_callback) -> List[Callback]:
     """returns a list of callbacks that are used by default"""
     result: List[Callback] = [
         CSVLogger(log_path('learning-curve.tsv'), separator='\t'),
