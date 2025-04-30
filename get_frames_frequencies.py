@@ -5,23 +5,20 @@ import librosa
 import gzip
 from tqdm import tqdm
 
-audios_folder = 'data/test/mdbsynth/audio_stems'
-annotations_folder = 'data/test/mdbsynth/annotation_stems'
-mdbsynth_folder = 'mdbsynth_8000'
+audios_folder = '/mnt/e/mdb-stem-synth-multi/audio_stems'
+annotations_folder = '/mnt/e/mdb-stem-synth-multi/annotation_stems'
+mdbsynth_folder = '/mnt/e/mdbsynth_multi_npygz'
 
 dataset_sampling_rate = 44100.
 dataset_frame_size = 1024
 dataset_hop_size = 128
 
-fcn_model_input_size = 1953
-fcn_model_sampling_rate = 8000.
-dataset_frame_size_seconds = dataset_frame_size / dataset_sampling_rate
+creme_model_input_size = 1024
+creme_model_sampling_rate = 16000.
 dataset_hop_size_seconds = dataset_hop_size / dataset_sampling_rate
-sampling_rate_to_match_fcn = int(fcn_model_input_size / dataset_frame_size_seconds)
-hop_size_to_match_fcn = int(sampling_rate_to_match_fcn * dataset_hop_size_seconds)
-hop_size_to_match_fcn_8000hz = int(fcn_model_sampling_rate * dataset_hop_size_seconds)
+dataset_hop_size_resampled = int(creme_model_sampling_rate * dataset_hop_size_seconds)
 
-def save_frames_annotations():
+def save_frames_annotations_multi():
     audios_list = sorted(os.listdir(audios_folder))
     # num_files = len(audios_list)
 
@@ -31,106 +28,22 @@ def save_frames_annotations():
         annotation_path = os.path.join(annotations_folder, audio_name.replace(".wav", ".csv"))
 
         # print(f"\nLoad audio: {audio_name} ({idx + 1}/{num_files})")
-        audio_samples, _ = librosa.load(audio_path, sr=None)
+        audio_samples, _ = librosa.load(audio_path, sr=creme_model_sampling_rate)
 
         # print(f"Pad audio to center frames")
-        audio_samples = librosa.util.pad_center(audio_samples, audio_samples.size + dataset_frame_size)
+        audio_samples = librosa.util.pad_center(audio_samples, size=audio_samples.size + creme_model_input_size)
 
         # print("Get audio frames")
-        frames = librosa.util.frame(audio_samples, dataset_frame_size, dataset_hop_size, axis=0)
+        frames = librosa.util.frame(audio_samples, frame_length=creme_model_input_size, hop_length=dataset_hop_size_resampled, axis=0)
 
         # print("Load frequency annotations")
-        annotations = pd.read_csv(annotation_path, header=None, names=['timestamp', 'frequency'])
-        frequencies = annotations['frequency'].values
+        annotations = pd.read_csv(annotation_path, header=None, names=['timestamp', 'frequency1', 'frequency2'])
+        frequencies = annotations[['frequency1', 'frequency2']].values
 
         # print("Check frames and frequencies vector sizes")
         if frames.shape[0] != frequencies.shape[0]:
             times = annotations['timestamp'].values
-            frame_indexes = librosa.time_to_frames(times, dataset_sampling_rate, dataset_hop_size)
-            frames = frames[frame_indexes, :]
-
-        # print("Save frames as .npy.gz")
-        frames_output_path = os.path.join(mdbsynth_folder, 'raw', f"{audio_name.replace('.wav', '.npy.gz')}")
-        os.makedirs(os.path.dirname(frames_output_path), exist_ok=True)
-        with gzip.GzipFile(frames_output_path, 'wb') as f:
-            np.save(f, frames.T)
-
-        # print("Save frequencies as .npy.gz\n")
-        frequencies_output_path = os.path.join(mdbsynth_folder, 'frequencies', f"{audio_name.replace('.wav', '.npy.gz')}")
-        os.makedirs(os.path.dirname(frequencies_output_path), exist_ok=True)
-        with gzip.GzipFile(frequencies_output_path, 'wb') as f:
-            np.save(f, frequencies)
-
-    print("Dataset processing complete.")
-
-def save_frames_annotations_fcn():
-    audios_list = sorted(os.listdir(audios_folder))
-    # num_files = len(audios_list)
-
-    # for idx, audio_name in enumerate(audios_list):
-    for audio_name in tqdm(audios_list, desc="Progress", unit="file"):
-        audio_path = os.path.join(audios_folder, audio_name)
-        annotation_path = os.path.join(annotations_folder, audio_name.replace(".wav", ".csv"))
-
-        # print(f"\nLoad audio: {audio_name} ({idx + 1}/{num_files})")
-        audio_samples, _ = librosa.load(audio_path, sr=sampling_rate_to_match_fcn)
-
-        # print(f"Pad audio to center frames")
-        audio_samples = librosa.util.pad_center(audio_samples, size=audio_samples.size + fcn_model_input_size)
-
-        # print("Get audio frames")
-        frames = librosa.util.frame(audio_samples, frame_length=fcn_model_input_size, hop_length=hop_size_to_match_fcn, axis=0)
-
-        # print("Load frequency annotations")
-        annotations = pd.read_csv(annotation_path, header=None, names=['timestamp', 'frequency'])
-        frequencies = annotations['frequency'].values
-
-        # print("Check frames and frequencies vector sizes")
-        if frames.shape[0] != frequencies.shape[0]:
-            times = annotations['timestamp'].values
-            frame_indexes = librosa.time_to_frames(times, sr=sampling_rate_to_match_fcn, hop_length=hop_size_to_match_fcn)
-            frames = frames[frame_indexes, :]
-
-        # print("Save frames as .npy.gz")
-        frames_output_path = os.path.join(mdbsynth_folder, 'raw', f"{audio_name.replace('.wav', '.npy.gz')}")
-        os.makedirs(os.path.dirname(frames_output_path), exist_ok=True)
-        with gzip.GzipFile(frames_output_path, 'wb') as f:
-            np.save(f, frames.T)
-
-        # print("Save frequencies as .npy.gz\n")
-        frequencies_output_path = os.path.join(mdbsynth_folder, 'frequencies', f"{audio_name.replace('.wav', '.npy.gz')}")
-        os.makedirs(os.path.dirname(frequencies_output_path), exist_ok=True)
-        with gzip.GzipFile(frequencies_output_path, 'wb') as f:
-            np.save(f, frequencies)
-
-    print("Dataset processing complete.")
-
-def save_frames_annotations_fcn_8000hz():
-    audios_list = sorted(os.listdir(audios_folder))
-    # num_files = len(audios_list)
-
-    # for idx, audio_name in enumerate(audios_list):
-    for audio_name in tqdm(audios_list, desc="Progress", unit="file"):
-        audio_path = os.path.join(audios_folder, audio_name)
-        annotation_path = os.path.join(annotations_folder, audio_name.replace(".wav", ".csv"))
-
-        # print(f"\nLoad audio: {audio_name} ({idx + 1}/{num_files})")
-        audio_samples, _ = librosa.load(audio_path, sr=fcn_model_sampling_rate)
-
-        # print(f"Pad audio to center frames")
-        audio_samples = librosa.util.pad_center(audio_samples, size=audio_samples.size + fcn_model_input_size)
-
-        # print("Get audio frames")
-        frames = librosa.util.frame(audio_samples, frame_length=fcn_model_input_size, hop_length=hop_size_to_match_fcn_8000hz, axis=0)
-
-        # print("Load frequency annotations")
-        annotations = pd.read_csv(annotation_path, header=None, names=['timestamp', 'frequency'])
-        frequencies = annotations['frequency'].values
-
-        # print("Check frames and frequencies vector sizes")
-        if frames.shape[0] != frequencies.shape[0]:
-            times = annotations['timestamp'].values
-            frame_indexes = librosa.time_to_frames(times, sr=fcn_model_sampling_rate, hop_length=hop_size_to_match_fcn_8000hz)
+            frame_indexes = librosa.time_to_frames(times, sr=creme_model_sampling_rate, hop_length=dataset_hop_size_resampled)
             frames = frames[frame_indexes, :]
 
         # print("Save frames as .npy.gz")
@@ -148,6 +61,4 @@ def save_frames_annotations_fcn_8000hz():
     print("Dataset processing complete.")
 
 if __name__ == '__main__':
-    # save_frames_annotations()
-    # save_frames_annotations_fcn()
-    save_frames_annotations_fcn_8000hz()
+    save_frames_annotations_multi()
