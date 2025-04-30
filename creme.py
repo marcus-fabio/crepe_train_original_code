@@ -1,4 +1,12 @@
+import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['GLOG_minloglevel'] = '3'
+os.environ['ABSL_MIN_LOG_LEVEL'] = '3'
+os.environ['JAX_PLATFORM_NAME'] = 'gpu'
+
 from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam, RMSprop, SGD
 from tensorflow.keras.layers import (
     Input,
     Conv2D,
@@ -11,10 +19,15 @@ from tensorflow.keras.layers import (
     Dense
 )
 
+optimizers = {
+    'adam': Adam,
+    'rmsprop': RMSprop,
+    'sgd': SGD
+}
 
-def creme() -> Model:
+def creme(optimizer, learning_rate, model_capacity=32, weights_crepe=None, **_) -> Model:
     # Load CREPE model and return the flattened layer
-    crepe_model = load_crepe_model()
+    crepe_model = load_crepe_model(weights_crepe)
     crepe_input = crepe_model.input
     x = crepe_model.layers[-2].output
 
@@ -27,10 +40,11 @@ def creme() -> Model:
     y = Dense(720, activation='sigmoid', name="creme-classifier")(y)
 
     model = Model(inputs=crepe_input, outputs=y)
+    model.compile(optimizer=optimizers[optimizer](learning_rate=learning_rate), loss='binary_crossentropy')
 
     # Freeze CREPE model weights
-    for layer in model.layers[:1]:  # First test: freeze only weights of first layer
-        layer.trainable = False
+    # for layer in model.layers[:1]:  # First test: freeze only weights of first layer
+    #     layer.trainable = False
 
     return model
 
@@ -59,16 +73,9 @@ def crepe() -> Model:
     return model
 
 
-def load_crepe_model() -> Model:
-    # package_dir = os.path.dirname(os.path.realpath(__file__))
-    filename = "model-full.h5"
-    # filepath = os.path.join(package_dir, filename)
+def load_crepe_model(weights_crepe="model-full.h5") -> Model:
     model = crepe()
-    model.load_weights(filename)
+    if weights_crepe:
+        model.load_weights(weights_crepe)
 
     return model
-
-
-if __name__ == '__main__':
-    crempe_model = creme()
-    crempe_model.summary()
