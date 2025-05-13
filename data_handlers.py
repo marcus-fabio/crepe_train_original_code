@@ -237,7 +237,7 @@ def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=72
         peaks, properties = find_peaks(vector, height=threshold)
         peak_heights = properties["peak_heights"]
         top_indices = np.argsort(-peak_heights)[:max_pitches]
-        selected_peaks = peaks[top_indices]
+        selected_peaks = peaks[np.sort(top_indices)]
         cents_list = []
 
         for center in selected_peaks:
