@@ -116,8 +116,8 @@ class PitchAccuracyCallback(Callback):
 
 def main():
     model = build_creme_model()
-    validation_set_names = ['mdbsynth-multi']
-    dataset_names = ['mdbsynth-multi']
+    validation_set_names = ['validation-set']
+    dataset_names = ['set-1', 'set-2', 'set-3', 'set-4', 'set-5', 'set-6', 'set-7']
     train_set, val_sets, val_sets_raw = prepare_datasets(dataset_names, validation_set_names)
     val_data = Dataset.concat([Dataset(*val_set) for val_set in val_sets]).collect()
 
