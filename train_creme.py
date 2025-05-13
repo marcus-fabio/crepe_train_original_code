@@ -37,7 +37,7 @@ os.environ['WANDB_SILENT'] = 'true'
 
 if os.getenv("WANDB_ENABLED") == "true":
     wandb.login(key=os.getenv("WANDB_API_KEY"))
-    wandb.init(project='fcn-retrain', resume=False, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
+    wandb.init(project=options['wandb_project_name'], resume=False, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
 
 def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray), (np.ndarray, np.ndarray)):
     train = train_dataset(train_dataset_names,

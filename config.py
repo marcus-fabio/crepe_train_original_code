@@ -62,7 +62,7 @@ parser.add_argument('--test-path', default='data/train',
 parser.add_argument('--wandb-key', default=None,
                     help='wandb api key')
 parser.add_argument('--wandb-project-name', default=f"training_{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}",
-                    help='wandb api key')
+                    help='wandb project name')
 parser.add_argument('--patience', default=32, type=int,
                     help='patience for early stopping')
 
