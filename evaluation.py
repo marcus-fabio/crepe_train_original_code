@@ -14,8 +14,8 @@ def raw_multipitch_accuracy(ref_cent, est_cent, cent_tolerance=50):
     """
     Computes Raw Pitch Accuracy (RPA) for multi-pitch estimation.
 
-    :param ref_cent: numpy array of reference frequencies numpy arrays
-    :param est_cent: numpy array of estimated frequencies numpy arrays
+    :param ref_cent: numpy array of reference frequencies arrays => np.array([[2000.03,550.56],[1000.20, 3654.12], ...])
+    :param est_cent: numpy array of estimated frequencies arrays => np.array([[2000.03,550.56],[1000.20, 3654.12], ...])
     :param cent_tolerance: acceptable tolerance between reference and estimated frequencies
     :return: rpa as a float
     """
@@ -24,7 +24,8 @@ def raw_multipitch_accuracy(ref_cent, est_cent, cent_tolerance=50):
     if np.sum(nonzero_freqs) == 0:
         return 0.0
 
-    freq_diff_cents = np.abs(ref_cent - est_cent)[nonzero_freqs]
+    # est_cent array is sorted by model, but ref_cents must be sorted to match est_cents array
+    freq_diff_cents = np.abs(np.sort(ref_cent) - est_cent)[nonzero_freqs]
     correct_frequencies = freq_diff_cents < cent_tolerance
     voicing = ref_cent != 0.0
     rpa = np.sum(voicing[nonzero_freqs] * correct_frequencies) / np.sum(voicing)
