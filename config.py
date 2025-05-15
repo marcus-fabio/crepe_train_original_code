@@ -44,7 +44,7 @@ parser.add_argument('--load-weights-crepe', default=None,
                     help='when specified, the crepe model weights will be loaded from this path')
 parser.add_argument('--save-model', default='model.weights.h5',
                     help='path to save the model on each epoch')
-parser.add_argument('--save-model-weights', default='weights/model-{epoch:02d}-{val_loss:.2f}.weights.h5',
+parser.add_argument('--save-model-weights', default='weights/model-{epoch:02d}-{val_loss:.4f}.weights.h5',
                     help='path to save the model weights on each epoch; supersedes --save-model')
 parser.add_argument('--save-best-only', default=False, action='store_true',
                     help='path to save the model weights on each epoch; supersedes --save-model')
