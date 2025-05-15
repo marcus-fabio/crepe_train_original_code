@@ -212,7 +212,7 @@ def to_classifier_label_multi(pitches, f_min=31.7, f_max=2005.5, vec_size=720, n
     return target_vector
 
 
-def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=720, max_pitches=2, threshold=0.3, window_size=18):
+def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=720, max_pitches=2, threshold_param=0.5, window_size=18):
     """
     Extract multiple pitch predictions from a salience vector using local peak detection.
 
@@ -221,7 +221,7 @@ def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=72
     :param f_max: Maximum frequency (Hz)
     :param vec_size: Number of bins (same as output vector size)
     :param max_pitches: Number of bins (same as output vector size)
-    :param threshold: Minimum salience required to count a peak
+    :param threshold_param: A constant value to adjust threshold to find peaks
     :param window_size: Number of bins to use around peak for weighted average
     :return: list of predicted frequencies (Hz)
     """
@@ -234,6 +234,9 @@ def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=72
     eps = 1e-10
 
     def _process_vector(vector):
+        vector_mean = np.mean(vector, dtype=np.float64)
+        vector_std = np.std(vector, dtype=np.float64)
+        threshold = vector_mean + threshold_param * vector_std
         peaks, properties = find_peaks(vector, height=threshold)
         peak_heights = properties["peak_heights"]
         top_indices = np.argsort(-peak_heights)[:max_pitches]
