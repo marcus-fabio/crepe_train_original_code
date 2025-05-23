@@ -12,23 +12,26 @@ import numpy as np
 from tensorflow.keras.callbacks import Callback
 import wandb
 
-from evaluation import accuracies, raw_multipitch_accuracy
-from config import (
-    options,
-    log_path,
-    build_model,
-    build_creme_model,
-    get_callbacks
+from evaluation import (
+    raw_pitches_accuracy
+    # accuracies,
 )
 from data_handlers import (
     Dataset,
     train_dataset,
     validation_dataset,
-    to_weighted_average_cents,
-    to_local_average_cents_fcn,
     to_local_average_cents_multi,
-    to_classifier_label_multi,
     freq2cents,
+    # to_weighted_average_cents,
+    # to_local_average_cents_fcn,
+    # to_classifier_label_multi,
+)
+from config import (
+    options,
+    log_path,
+    build_creme_model,
+    get_callbacks
+    # build_model,
 )
 
 load_dotenv()
@@ -37,14 +40,17 @@ os.environ['WANDB_SILENT'] = 'true'
 
 if os.getenv("WANDB_ENABLED") == "true":
     wandb.login(key=os.getenv("WANDB_API_KEY"))
-    wandb.init(project=os.getenv("WANDB_PROJECT_NAME"), resume=False, name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
+    wandb.init(project=os.getenv("WANDB_PROJECT_NAME"),
+               resume=False,
+               name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
 
-def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray), (np.ndarray, np.ndarray)):
+
+def prepare_datasets(train_dataset_names,
+                     val_dataset_names) -> (Dataset, (np.ndarray, np.ndarray), (np.ndarray, np.ndarray)):
     train = train_dataset(train_dataset_names,
                           options['train_path'],
                           batch_size=options['batch_size'],
                           augment=options['augment'])
-    # print("Train dataset:", train, file=sys.stderr)
     print("Train dataset configured")
 
     validation = []
@@ -62,6 +68,7 @@ def prepare_datasets(train_dataset_names, val_dataset_names) -> (Dataset, (np.nd
     print("Validation dataset configured")
 
     return train, validation, validation_raw
+
 
 class PitchAccuracyCallback(Callback):
     def __init__(self, val_sets, val_dataset_names, local_average=False):
@@ -82,37 +89,40 @@ class PitchAccuracyCallback(Callback):
         names = list(self.val_dataset_names)
         print(file=sys.stderr)
 
-        mae_list = []
+        # mae_list = []
         rpa_list = []
         # rca_list = []
 
         for audio_frames, true_cents in self.val_sets:
             predicted = self.model.predict(audio_frames)
             predicted_cents = self.to_cents(predicted)
-            diff = np.abs(true_cents - predicted_cents)
-            mae = np.mean(diff[np.isfinite(diff)])
+            # diff = np.abs(true_cents - predicted_cents)
+            # mae = np.mean(diff[np.isfinite(diff)])
             # rpa, rca = accuracies(true_cents, predicted_cents)
-            rpa = raw_multipitch_accuracy(true_cents, predicted_cents)
-            nans = np.mean(np.isnan(diff))
+            rpa = raw_pitches_accuracy(true_cents, predicted_cents)
+            # nans = np.mean(np.isnan(diff))
 
             # print(f"{names.pop(0)}: MAE = {mae}, RPA = {rpa}, RCA = {rca}, nans = {nans}", file=sys.stderr)
-            print(f"{names.pop(0)}: MAE = {mae}, RPA = {rpa}, nans = {nans}", file=sys.stderr)
-            mae_list.append(mae)
+            # print(f"{names.pop(0)}: MAE = {mae}, RPA = {rpa}, nans = {nans}", file=sys.stderr)
+            print(f"{names.pop(0)}: RPA = {rpa}", file=sys.stderr)
+            # mae_list.append(mae)
             rpa_list.append(rpa)
             # rca_list.append(rca)
 
             if os.getenv("WANDB_ENABLED") == "true":
                 # wandb.log({"epoch": epoch, "rpa": rpa, "rca": rca, "mae": mae})
-                wandb.log({"epoch": epoch, "rpa": rpa, "mae": mae})
+                # wandb.log({"epoch": epoch, "rpa": rpa, "mae": mae})
+                wandb.log({"epoch": epoch, "rpa": rpa})
 
-        with open(log_path(self.prefix + "mae.tsv"), "a") as f:
-            f.write('\t'.join(['%.6f' % mae for mae in mae_list]) + '\n')
+        # with open(log_path(self.prefix + "mae.tsv"), "a") as f:
+        #     f.write('\t'.join(['%.6f' % mae for mae in mae_list]) + '\n')
         with open(log_path(self.prefix + "rpa.tsv"), "a") as f:
             f.write('\t'.join(['%.6f' % rpa for rpa in rpa_list]) + '\n')
         # with open(log_path(self.prefix + "rca.tsv"), "a") as f:
         #     f.write('\t'.join(['%.6f' % rca for rca in rca_list]) + '\n')
 
         print(file=sys.stderr)
+
 
 def main():
     model = build_creme_model()
@@ -128,6 +138,7 @@ def main():
               epochs=options['epochs'],
               callbacks=callbacks,
               validation_data=val_data)
+
 
 if __name__ == "__main__":
     main()
