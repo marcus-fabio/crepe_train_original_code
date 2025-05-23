@@ -212,7 +212,13 @@ def to_classifier_label_multi(pitches, f_min=31.7, f_max=2005.5, vec_size=720, n
     return target_vector
 
 
-def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=720, max_pitches=2, threshold_param=0.5, window_size=18):
+def to_local_average_cents_multi(salience,
+                                 f_min=31.7,
+                                 f_max=2005.5,
+                                 vec_size=720,
+                                 max_pitches=2,
+                                 threshold_param=0.5,
+                                 window_size=18):
     """
     Extract multiple pitch predictions from a salience vector using local peak detection.
 
@@ -251,6 +257,7 @@ def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=72
             weighted_avg_cents = np.sum(window_vector * window_cents.flatten()) / (np.sum(window_vector) + eps)
             cents_list.append(weighted_avg_cents)
 
+        cents_list = cents_list or [0.0]
         cents = np.array(cents_list)
         if cents.shape[0] < max_pitches:
             cents = np.pad(cents, (0, max_pitches - cents.shape[0]), constant_values=0.0)
@@ -265,15 +272,25 @@ def to_local_average_cents_multi(salience, f_min=31.7, f_max=2005.5, vec_size=72
         raise ValueError("Salience must be 1D or 2D array")
 
 
-def freq2cents(f0, f_ref=10.):
+def freq2cents(freqs, f_ref=10.):
     """
     Convert a given frequency into its corresponding cents value, according to given reference frequency f_ref
-    :param f0: f0 value (in Hz)
+    :param freqs: frequencies in hertz => array([[100.00,200.00...],[300.00,400.00...]])
     :param f_ref: reference frequency for conversion to cents (in Hz)
-    :return: value in cents
+    :return: frequencies array in cents (zero frequencies are replaced by zero)
     """
-    c = 1200 * np.ma.log2(f0/f_ref)
+    c = 1200 * np.ma.log2(freqs / f_ref)
     return c.filled(0)
+
+
+def cents2freq(cents, f_ref=10.):
+    """
+    Convert cents back to frequency, given a reference frequency f_ref.
+    :param cents: cents value (can be a scalar or numpy array)
+    :param f_ref: reference frequency for conversion from cents (in Hz)
+    :return: frequency in Hz
+    """
+    return f_ref * np.power(2, cents / 1200)
 
 
 def train_dataset(names, train_path, batch_size=32, loop=True, augment=True) -> Dataset:
