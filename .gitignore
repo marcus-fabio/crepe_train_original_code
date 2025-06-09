@@ -20,5 +20,6 @@ mdbsynth_8000
 
 model-full.h5
 model-fcn.h5
+model.weights.h5
 *.png
 .env
