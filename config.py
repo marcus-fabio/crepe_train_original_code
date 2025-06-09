@@ -62,6 +62,8 @@ parser.add_argument('--wandb-key', default=None,
                     help='wandb api key')
 parser.add_argument('--patience', default=32, type=int,
                     help='patience for early stopping')
+parser.add_argument('--prediction', default=False, action='store_true',
+                    help='Run predictions')
 
 options = vars(parser.parse_args())
 log_dir = str(os.path.join(options['logs_path'], options['experiment_name']))
