@@ -6,11 +6,10 @@ import librosa
 from keras import Model
 from tqdm import tqdm
 
-# audios_folder = '/mnt/e/mdb-stem-synth-multi/audio_stems'
-audios_folder = '/mnt/e/mdb-stem-synth-multi/audio'
-# annotations_folder = '/mnt/e/mdb-stem-synth-multi/annotation_stems'
-annotations_folder = '/mnt/e/mdb-stem-synth-multi/annotation'
-mdbsynth_folder = '/mnt/e/mdbsynth_multi_npygz'
+audios_folder = os.getenv("AUDIO_PATH") or '/mnt/e/mdb-stem-synth-multi/audio_stems'
+# audios_folder = '/mnt/e/mdb-stem-synth-multi/audio'
+annotations_folder = os.getenv("ANNOTATION_PATH") or '/mnt/e/mdb-stem-synth-multi/annotation_stems'
+# annotations_folder = '/mnt/e/mdb-stem-synth-multi/annotation'
 
 dataset_sampling_rate = 44100.
 dataset_frame_size = 1024
