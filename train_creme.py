@@ -200,7 +200,8 @@ if __name__ == "__main__":
             table = wandb.Table(columns=["audio_name", "rpa"])
 
             for audio_name in audios_list:
-                predicted_cents, reference_frequencies = run_prediction(audio_name, creme_model)
+                predictions, reference_frequencies = run_prediction(audio_name, creme_model)
+                predicted_cents = to_local_average_cents_multi(predictions)
                 true_cents = freq2cents(reference_frequencies)
                 rpa = raw_pitches_accuracy(true_cents, np.array(predicted_cents))
 
