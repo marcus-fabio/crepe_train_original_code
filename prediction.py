@@ -29,7 +29,8 @@ def normalize(frames: np.ndarray) -> tuple[list[np.ndarray], list[np.ndarray]]:
 def run(model: Model):
     audios_list = os.listdir(audios_folder)
 
-    for audio_name in tqdm(audios_list, desc="Progress", unit="file"):
+    for idx, audio_name in enumerate(audios_list):
+        print(f"{idx + 1}/{len(audios_list)}")
         audio_path = os.path.join(audios_folder, audio_name)
         annotation_path = os.path.join(annotations_folder, audio_name.replace(".wav", ".csv"))
 
