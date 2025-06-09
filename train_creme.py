@@ -12,6 +12,8 @@ os.environ['JAX_PLATFORM_NAME'] = 'gpu'
 import numpy as np
 from tensorflow.keras.callbacks import Callback
 import wandb
+import pandas as pd
+import librosa
 
 from evaluation import (
     raw_pitches_accuracy
@@ -35,8 +37,6 @@ from config import (
     # build_model,
 )
 
-import prediction
-
 load_dotenv()
 
 os.environ['WANDB_SILENT'] = 'true'
@@ -46,6 +46,54 @@ if os.getenv("WANDB_ENABLED") == "true":
     wandb.init(project=os.getenv("WANDB_PROJECT_NAME"),
                resume=False,
                name=f"run-{datetime.now().strftime('%Y-%m-%dT%H_%M_%S')}")
+
+audios_folder = os.getenv("AUDIO_PATH") or '/mnt/e/mdb-stem-synth-multi/audio_stems'
+# audios_folder = '/mnt/e/mdb-stem-synth-multi/audio'
+annotations_folder = os.getenv("ANNOTATION_PATH") or '/mnt/e/mdb-stem-synth-multi/annotation_stems'
+# annotations_folder = '/mnt/e/mdb-stem-synth-multi/annotation'
+
+dataset_sampling_rate = 44100.
+dataset_frame_size = 1024
+dataset_hop_size = 128
+
+creme_model_input_size = 1024
+creme_model_sampling_rate = 16000.
+dataset_hop_size_seconds = dataset_hop_size / dataset_sampling_rate
+dataset_hop_size_resampled = int(creme_model_sampling_rate * dataset_hop_size_seconds)
+
+def normalize(frames: np.ndarray) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    return (frames - np.mean(frames, axis=1, keepdims=True)) / np.std(frames, axis=1, keepdims=True)
+
+def run_prediction(audio_name: str, model: Model):
+    audio_path = os.path.join(audios_folder, audio_name)
+    annotation_path = os.path.join(annotations_folder, audio_name.replace(".wav", ".csv"))
+
+    # Get frames
+    audio_samples, _ = librosa.load(audio_path, sr=creme_model_sampling_rate)
+    audio_samples = librosa.util.pad_center(audio_samples, size=audio_samples.size + creme_model_input_size)
+    frames = librosa.util.frame(audio_samples, frame_length=creme_model_input_size,
+                                hop_length=dataset_hop_size_resampled, axis=0)
+
+    # Get frequency references
+    annotations = pd.read_csv(annotation_path, header=None, names=['timestamp', 'frequency1', 'frequency2'])
+    frequencies = annotations[['frequency1', 'frequency2']].values
+
+    # Fit frames and annotation size
+    if frames.shape[0] != frequencies.shape[0]:
+        times = annotations['timestamp'].values
+        frame_indexes = librosa.time_to_frames(times, sr=creme_model_sampling_rate,
+                                               hop_length=dataset_hop_size_resampled)
+        frames = frames[frame_indexes, :]
+
+    # Remove unvoiced frames
+    nonzero = np.any(frequencies > 0, axis=1)
+    frames = frames[nonzero]
+    frequencies = frequencies[nonzero]
+
+    # Get prediction
+    predictions = model.predict(normalize(frames))
+
+    return predictions, frequencies
 
 
 def prepare_datasets(train_dataset_names,
@@ -147,17 +195,16 @@ if __name__ == "__main__":
     creme_model = build_creme_model()
 
     if options['prediction']:
-        predictions, references_frequencies, audio_list = prediction.run(creme_model)
-
         if os.getenv("WANDB_ENABLED") == "true":
-            table = wandb.Table(columns=["audio", "rpa"])
+            audios_list = os.listdir(audios_folder)
+            table = wandb.Table(columns=["audio_name", "rpa"])
 
-            for prediction, reference_frequencies, audio in zip(predictions, references_frequencies, audio_list):
-                predicted_cents = to_local_average_cents_multi(prediction)
+            for audio_name in audios_list:
+                predicted_cents, reference_frequencies = run_prediction(audio_name, creme_model)
                 true_cents = freq2cents(reference_frequencies)
                 rpa = raw_pitches_accuracy(true_cents, np.array(predicted_cents))
 
-                table.add_data(audio, rpa)
+                table.add_data(audio_name, rpa)
                 wandb.log({"rpa": rpa})
                 wandb.log({"RPA": table})
     else:
