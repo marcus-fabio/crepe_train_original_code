@@ -2,6 +2,7 @@ import os
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
+from keras import Model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['GLOG_minloglevel'] = '3'
@@ -33,6 +34,8 @@ from config import (
     get_callbacks
     # build_model,
 )
+
+import prediction
 
 load_dotenv()
 
@@ -124,8 +127,8 @@ class PitchAccuracyCallback(Callback):
         print(file=sys.stderr)
 
 
-def main():
-    model = build_creme_model()
+def main(model: Model):
+    # model = build_creme_model()
     validation_set_names = ['validation-set']
     dataset_names = ['set-1', 'set-2', 'set-3', 'set-4', 'set-5', 'set-6', 'set-7']
     train_set, val_sets, val_sets_raw = prepare_datasets(dataset_names, validation_set_names)
@@ -141,4 +144,21 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    creme_model = build_creme_model()
+
+    if options['prediction']:
+        predictions, references_frequencies, audio_list = prediction.run(creme_model)
+
+        if os.getenv("WANDB_ENABLED") == "true":
+            table = wandb.Table(columns=["audio", "rpa"])
+
+            for prediction, reference_frequencies, audio in zip(predictions, references_frequencies, audio_list):
+                predicted_cents = to_local_average_cents_multi(prediction)
+                true_cents = freq2cents(reference_frequencies)
+                rpa = raw_pitches_accuracy(true_cents, np.array(predicted_cents))
+
+                table.add_data(audio, rpa)
+                wandb.log({"rpa": rpa})
+                wandb.log({"RPA": table})
+    else:
+        main(creme_model)
