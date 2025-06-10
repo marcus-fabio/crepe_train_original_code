@@ -16,7 +16,8 @@ import pandas as pd
 import librosa
 
 from evaluation import (
-    raw_pitches_accuracy
+    raw_pitches_accuracy,
+    evaluate_rpa_and_errors,
     # accuracies,
 )
 from data_handlers import (
@@ -197,16 +198,24 @@ if __name__ == "__main__":
     if options['prediction']:
         if os.getenv("WANDB_ENABLED") == "true":
             audios_list = os.listdir(audios_folder)
-            table = wandb.Table(columns=["audio_name", "rpa"])
+            table = wandb.Table(columns=["audio_name", "rpa", "substitution_error", "miss_error", "false_alarm", "total_error"])
 
             for audio_name in audios_list:
                 predictions, reference_frequencies = run_prediction(audio_name, creme_model)
                 predicted_cents = to_local_average_cents_multi(predictions)
                 true_cents = freq2cents(reference_frequencies)
-                rpa = raw_pitches_accuracy(true_cents, np.array(predicted_cents))
+                rpa, substitution_error, miss_error, false_alarm, total_error = evaluate_rpa_and_errors(
+                    true_cents, np.array(predicted_cents))
 
-                table.add_data(audio_name, rpa)
-                wandb.log({"rpa": rpa})
-                wandb.log({"RPA": table})
+                table.add_data(audio_name, rpa, substitution_error, miss_error, false_alarm, total_error)
+                wandb.log({
+                    "rpa": rpa,
+                    "substitution_error": substitution_error,
+                    "miss_error": miss_error,
+                    "false_alarm": false_alarm,
+                    "total_error": total_error
+                })
+
+            wandb.log({"RPA": table})
     else:
         main(creme_model)
